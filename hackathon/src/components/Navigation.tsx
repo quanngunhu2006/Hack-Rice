@@ -1,102 +1,178 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth0 } from '@auth0/auth0-react'
-import { useEffect } from 'react'
-import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Home, Info, Phone, BarChart3, LogIn, LogOut, User, Settings } from 'lucide-react'
+import { useAuth0 } from '@auth0/auth0-react'
+import { 
+  Home, 
+  FileText, 
+  Plus, 
+  MapPin, 
+  User, 
+  Settings, 
+  LogOut,
+  Menu,
+  X
+} from 'lucide-react'
+import { useState } from 'react'
 
-function Navigation() {
+export default function Navigation() {
   const location = useLocation()
-  const { isAuthenticated, user, logout, loginWithRedirect, isLoading } = useAuth0()
-
-  // Monitor authentication state changes
-  useEffect(() => {
-    console.log('Navigation Auth state changed:', {
-      isAuthenticated,
-      user,
-      isLoading,
-      userName: user?.name,
-      userEmail: user?.email,
-      timestamp: new Date().toISOString()
-    })
-  }, [isAuthenticated, user, isLoading])
-
-  // Debug logging (remove in production)
-  console.log('Navigation render - Auth state:', {
-    isAuthenticated,
-    user,
-    isLoading,
-    userName: user?.name,
-    userEmail: user?.email
-  })
+  const { user, isAuthenticated, logout } = useAuth0()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const navItems = [
-    { path: '/about', label: 'About', icon: Info },
-    { path: '/contact', label: 'Contact', icon: Phone },
-    { path: '/dashboard', label: 'Dashboard', icon: BarChart3, requiresAuth: true },
-    { path: '/profile', label: 'Profile', icon: User, requiresAuth: true },
-    { path: '/debug', label: 'Debug', icon: Settings },
+    { path: '/', icon: Home, label: 'Explore' },
+    { path: '/propose', icon: Plus, label: 'Propose', requireAuth: true },
+    { path: '/map', icon: MapPin, label: 'Map' },
+    { path: '/account', icon: User, label: 'Account', requireAuth: true },
+    { path: '/admin', icon: Settings, label: 'Admin', requireAuth: true },
   ]
 
-  const handleLogin = () => {
-    loginWithRedirect()
+  const handleSignOut = () => {
+    logout({ logoutParams: { returnTo: window.location.origin } })
   }
 
-  const handleLogout = () => {
-    logout({
-      logoutParams: {
-        returnTo: `${window.location.origin}/`
-      }
-    })
+  const isActivePath = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/'
+    }
+    return location.pathname.startsWith(path)
   }
 
-  const handleRefresh = () => {
-    // First try to force re-check auth state
-    console.log('Manual refresh triggered - current state:', { isAuthenticated, user, isLoading })
-    // If still not working, reload the page
-    setTimeout(() => {
-      window.location.reload()
-    }, 100)
+  const canAccessRoute = (item: any) => {
+    if (item.requireAuth && !isAuthenticated) return false
+    return true
   }
 
-  const getUserInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase()
+  const NavLink = ({ item }: { item: any }) => {
+    const Icon = item.icon
+    const isActive = isActivePath(item.path)
+    const canAccess = canAccessRoute(item)
+
+    return (
+      <Link
+        to={canAccess ? item.path : '/login'}
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+          isActive 
+            ? 'bg-primary text-primary-foreground' 
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        } ${!canAccess ? 'opacity-50' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <Icon className="h-5 w-5" />
+        <span className="font-medium">{item.label}</span>
+      </Link>
+    )
   }
 
   return (
-    <nav className="border-b">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">HR</span>
-          </div>
-          <span className="text-xl font-semibold">HackRice</span>
-        </Link>
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r bg-background px-6 py-8">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-xl font-bold">CitizenVoice</h1>
+          </Link>
 
-        {/* Navigation Links & Login Button */}
-        <div className="flex items-center space-x-6">
-          {navItems.map(({ path, label, icon: Icon }) => (
-            <Link
-              key={path}
-              to={path}
-              className={`flex items-center gap-2 text-sm ${
-                location.pathname === path
-                  ? 'text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground transition-colors'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          ))}
-          <Button>Login</Button>
+          {/* Navigation */}
+          <nav className="flex flex-1 flex-col">
+            <ul role="list" className="flex flex-1 flex-col gap-y-2">
+              {navItems.map((item) => (
+                <li key={item.path}>
+                  <NavLink item={item} />
+                </li>
+              ))}
+            </ul>
+
+            {/* User section */}
+            <div className="mt-auto space-y-2">
+              {isAuthenticated ? (
+                <>
+                  <div className="px-3 py-2 text-sm">
+                    <div className="font-medium truncate">{user?.email}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button asChild className="w-full">
+                  <Link to="/login">Sign In</Link>
+                </Button>
+              )}
+            </div>
+          </nav>
         </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between p-4 border-b bg-background">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-xl font-bold">CitizenVoice</h1>
+          </Link>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </Button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden">
+            <div className="border-b bg-background px-4 py-2">
+              <nav className="space-y-2">
+                {navItems.map((item) => (
+                  <NavLink key={item.path} item={item} />
+                ))}
+                
+                <div className="border-t pt-2 mt-2">
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-3 py-2 text-sm">
+                        <div className="font-medium truncate">{user?.email}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3"
+                        onClick={handleSignOut}
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                        Sign In
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </nav>
+            </div>
+          </div>
+        )}
       </div>
-    </nav>
+    </>
   )
 }
-
-export default Navigation
