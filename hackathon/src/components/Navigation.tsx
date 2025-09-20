@@ -41,7 +41,11 @@ function Navigation() {
   ]
 
   const handleLogin = () => {
-    loginWithRedirect()
+    loginWithRedirect({
+      authorizationParams: {
+        redirect_uri: `${window.location.origin}/dashboard`
+      }
+    })
   }
 
   const handleLogout = () => {
@@ -66,36 +70,85 @@ function Navigation() {
   }
 
   return (
-    <nav className="border-b">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">HR</span>
-          </div>
-          <span className="text-xl font-semibold">HackRice</span>
-        </Link>
+    <Card className="p-4 mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <nav className="flex flex-wrap gap-2">
+          {navItems.map(({ path, label, icon: Icon, requiresAuth }) => {
+            // Hide auth-required pages if not authenticated
+            if (requiresAuth && !isAuthenticated) return null
 
-        {/* Navigation Links & Login Button */}
-        <div className="flex items-center space-x-6">
-          {navItems.map(({ path, label, icon: Icon }) => (
-            <Link
-              key={path}
-              to={path}
-              className={`flex items-center gap-2 text-sm ${
-                location.pathname === path
-                  ? 'text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground transition-colors'
-              }`}
+            return (
+              <Button
+                key={path}
+                variant={location.pathname === path ? "default" : "outline"}
+                size="sm"
+                asChild
+              >
+                <Link to={path} className="flex items-center gap-2">
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              </Button>
+            )
+          })}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              Loading...
+            </div>
+          ) : isAuthenticated ? (
+            <>
+              {/* User Profile */}
+              <div className="flex items-center gap-2 text-sm">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>
+                    {user?.name ? getUserInitials(user.name) : <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline text-muted-foreground">
+                  {user?.name}
+                </span>
+              </div>
+
+              {/* Refresh Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="flex items-center gap-2"
+                title="Refresh authentication state"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+
+              {/* Logout Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant={location.pathname === '/login' ? "default" : "outline"}
+              size="sm"
+              onClick={handleLogin}
+              className="flex items-center gap-2"
             >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          ))}
-          <Button>Login</Button>
+              <LogIn className="h-4 w-4" />
+              Login
+            </Button>
+          )}
         </div>
       </div>
-    </nav>
+    </Card>
   )
 }
 
