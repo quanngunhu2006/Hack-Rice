@@ -1,12 +1,6 @@
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useAuth0 } from '@auth0/auth0-react'
-import { Activity, Users, DollarSign, TrendingUp, User, Mail, Calendar } from 'lucide-react'
-import { FileText, Eye, LogOut } from 'lucide-react'
+import { Activity, Users, DollarSign, TrendingUp, User } from 'lucide-react'
 
 function Dashboard() {
-  const { user, isAuthenticated } = useAuth0()
   const stats = [
     {
       title: "Total Users",
@@ -46,68 +40,52 @@ function Dashboard() {
   ]
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      {/* Left Sidebar Navigation */}
-      <aside className="w-64 border-r bg-card">
-        <nav className="p-4 space-y-8">
-          {/* Proposal Category */}
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground mb-2">Proposal</h2>
-            <div className="space-y-1">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2"
-                asChild
-              >
-                <a href="#file-proposal">
-                  <FileText className="h-4 w-4" />
-                  File Proposal
-                </a>
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2"
-                asChild
-              >
-                <a href="#view-proposal">
-                  <Eye className="h-4 w-4" />
-                  View Proposal
-                </a>
-              </Button>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <div key={index} className="bg-card p-6 rounded-lg border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                <p className="text-2xl font-bold">{stat.value}</p>
+              </div>
+              <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <stat.icon className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center">
+              <span className={`text-sm font-medium ${
+                stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {stat.change}
+              </span>
+              <span className="text-sm text-muted-foreground ml-2">from last month</span>
             </div>
           </div>
+        ))}
+      </div>
 
-          {/* Account Category */}
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground mb-2">My Account</h2>
-            <div className="space-y-1">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2"
-                asChild
-              >
-                <a href="#my-account">
-                  <User className="h-4 w-4" />
-                  Profile
-                </a>
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
+      {/* Recent Activity */}
+      <div className="bg-card p-6 rounded-lg border">
+        <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+        <div className="space-y-4">
+          {recentActivity.map((activity) => (
+            <div key={activity.id} className="flex items-center space-x-4">
+              <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{activity.user}</p>
+                <p className="text-sm text-muted-foreground">{activity.action}</p>
+              </div>
+              <span className="text-sm text-muted-foreground">{activity.time}</span>
             </div>
-          </div>
-        </nav>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 bg-background">
-        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-        {/* Content will be added here based on selected navigation */}
-      </main>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
