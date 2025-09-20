@@ -1,7 +1,50 @@
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useAuth0 } from '@auth0/auth0-react'
+import { Activity, Users, DollarSign, TrendingUp, User, Mail, Calendar } from 'lucide-react'
 import { FileText, Eye, User, LogOut } from 'lucide-react'
 
 function Dashboard() {
+  const { user, isAuthenticated } = useAuth0()
+  const stats = [
+    {
+      title: "Total Users",
+      value: "2,543",
+      change: "+12.5%",
+      icon: Users,
+      trend: "up"
+    },
+    {
+      title: "Revenue",
+      value: "$45,678",
+      change: "+8.2%",
+      icon: DollarSign,
+      trend: "up"
+    },
+    {
+      title: "Active Sessions",
+      value: "1,234",
+      change: "-2.1%",
+      icon: Activity,
+      trend: "down"
+    },
+    {
+      title: "Conversion Rate",
+      value: "3.24%",
+      change: "+0.8%",
+      icon: TrendingUp,
+      trend: "up"
+    }
+  ]
+
+  const recentActivity = [
+    { id: 1, user: "John Doe", action: "Created new project", time: "2 minutes ago" },
+    { id: 2, user: "Jane Smith", action: "Updated profile", time: "5 minutes ago" },
+    { id: 3, user: "Mike Johnson", action: "Completed task", time: "10 minutes ago" },
+    { id: 4, user: "Sarah Wilson", action: "Joined team", time: "15 minutes ago" },
+  ]
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Sidebar Navigation */}
