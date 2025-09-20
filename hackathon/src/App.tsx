@@ -1,34 +1,55 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route } from 'react-router-dom'
+import { useAuth0 } from '@auth0/auth0-react'
+import Navigation from '@/components/Navigation'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import Explore from '@/pages/Explore'
+import ProposalDetail from '@/pages/ProposalDetail'
+import Propose from '@/pages/Propose'
+import MapPage from '@/pages/MapPage'
+import Account from '@/pages/Account'
+import Admin from '@/pages/Admin'
+import Login from '@/pages/Login'
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  const { isAuthenticated } = useAuth0()
+  
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <Routes>
+        <Route path="/map" element={
+          <div className="lg:ml-64">
+            <MapPage />
+          </div>
+        } />
+        <Route path="/*" element={
+          <div className="lg:ml-64">
+            <div className="container mx-auto px-4 py-8">
+              <Routes>
+                <Route path="/" element={<Explore />} />
+                <Route path="/proposals/:id" element={<ProposalDetail />} />
+                <Route path="/propose" element={
+                  <ProtectedRoute>
+                    <Propose />
+                  </ProtectedRoute>
+                } />
+                <Route path="/account" element={
+                  <ProtectedRoute>
+                    <Account />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/login" element={<Login />} />
+              </Routes>
+            </div>
+          </div>
+        } />
+      </Routes>
+    </div>
   )
 }
 
