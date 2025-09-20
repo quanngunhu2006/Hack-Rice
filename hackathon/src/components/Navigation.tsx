@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth0 } from '@auth0/auth0-react'
 import { 
   Home, 
   FileText, 
@@ -17,23 +16,19 @@ import { useState } from 'react'
 
 export default function Navigation() {
   const location = useLocation()
-  const { user, profile, signOut } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth0()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const navItems = [
     { path: '/', icon: Home, label: 'Explore' },
-    { path: '/propose', icon: Plus, label: 'Propose', requireVerified: true },
+    { path: '/propose', icon: Plus, label: 'Propose', requireAuth: true },
     { path: '/map', icon: MapPin, label: 'Map' },
     { path: '/account', icon: User, label: 'Account', requireAuth: true },
     { path: '/admin', icon: Settings, label: 'Admin', requireAuth: true },
   ]
 
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-    } catch (error) {
-      console.error('Sign out error:', error)
-    }
+  const handleSignOut = () => {
+    logout({ logoutParams: { returnTo: window.location.origin } })
   }
 
   const isActivePath = (path: string) => {
@@ -44,8 +39,7 @@ export default function Navigation() {
   }
 
   const canAccessRoute = (item: any) => {
-    if (item.requireAuth && !user) return false
-    if (item.requireVerified && (!user || !profile?.verified_resident)) return false
+    if (item.requireAuth && !isAuthenticated) return false
     return true
   }
 
@@ -66,11 +60,6 @@ export default function Navigation() {
       >
         <Icon className="h-5 w-5" />
         <span className="font-medium">{item.label}</span>
-        {item.requireVerified && !profile?.verified_resident && user && (
-          <Badge variant="secondary" className="text-xs">
-            Verify
-          </Badge>
-        )}
       </Link>
     )
   }
@@ -81,12 +70,12 @@ export default function Navigation() {
       <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r bg-background px-6 py-8">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <FileText className="h-5 w-5 text-primary-foreground" />
             </div>
             <h1 className="text-xl font-bold">CitizenVoice</h1>
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="flex flex-1 flex-col">
@@ -100,18 +89,10 @@ export default function Navigation() {
 
             {/* User section */}
             <div className="mt-auto space-y-2">
-              {user ? (
+              {isAuthenticated ? (
                 <>
                   <div className="px-3 py-2 text-sm">
-                    <div className="font-medium truncate">{user.email}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge 
-                        variant={profile?.verified_resident ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {profile?.verified_resident ? "Verified" : "Unverified"}
-                      </Badge>
-                    </div>
+                    <div className="font-medium truncate">{user?.email}</div>
                   </div>
                   <Button
                     variant="ghost"
@@ -165,18 +146,10 @@ export default function Navigation() {
                 ))}
                 
                 <div className="border-t pt-2 mt-2">
-                  {user ? (
+                  {isAuthenticated ? (
                     <>
                       <div className="px-3 py-2 text-sm">
                         <div className="font-medium truncate">{user?.email}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge 
-                            variant={profile?.verified_resident ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {profile?.verified_resident ? "Verified" : "Unverified"}
-                          </Badge>
-                        </div>
                       </div>
                       <Button
                         variant="ghost"

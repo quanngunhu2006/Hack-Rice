@@ -1,18 +1,17 @@
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ReactNode } from 'react'
 
 interface ProtectedRouteProps {
   children: ReactNode
-  requireVerified?: boolean
 }
 
-export default function ProtectedRoute({ children, requireVerified = false }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth()
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth0()
   const location = useLocation()
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="space-y-4 w-full max-w-md">
@@ -24,12 +23,8 @@ export default function ProtectedRoute({ children, requireVerified = false }: Pr
     )
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
-  }
-
-  if (requireVerified && profile && !profile.verified_resident) {
-    return <Navigate to="/account" state={{ from: location }} replace />
   }
 
   return <>{children}</>

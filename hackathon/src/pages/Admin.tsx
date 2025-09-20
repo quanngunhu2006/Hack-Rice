@@ -6,9 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/hooks/useToast'
-import { usePendingProposals, usePendingReports } from '@/hooks/useAdmin'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/hooks/useToast'
 import { CheckCircle, XCircle, AlertTriangle, FileText, MapPin, Calendar, User } from 'lucide-react'
 
 interface ModerationAction {
@@ -24,8 +23,11 @@ export default function Admin() {
   const [rejectionReason, setRejectionReason] = useState('')
   const { toast } = useToast()
 
-  const { data: pendingProposals, isLoading: proposalsLoading } = usePendingProposals()
-  const { data: pendingReports, isLoading: reportsLoading } = usePendingReports()
+  // Demo data for admin interface
+  const pendingProposals: any[] = []
+  const pendingReports: any[] = []
+  const proposalsLoading = false
+  const reportsLoading = false
 
   const handleModerationAction = async (item: any, action: 'approve' | 'reject', type: 'proposal' | 'report') => {
     if (action === 'reject') {

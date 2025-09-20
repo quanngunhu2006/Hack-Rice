@@ -9,7 +9,7 @@ import { Search, Plus, TrendingUp, Clock, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useProposals } from '@/hooks/useProposals'
 import ProposalCard from '@/components/ProposalCard'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth0 } from '@auth0/auth0-react'
 
 const CATEGORIES = ['Roads', 'Sanitation', 'Parks', 'Safety', 'Zoning', 'Other'] as const
 
@@ -17,7 +17,7 @@ export default function Explore() {
   const [activeTab, setActiveTab] = useState('trending')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const { user } = useAuth()
+  const { isAuthenticated } = useAuth0()
 
   const { data: proposals, isLoading, error } = useProposals({
     q: searchQuery,
@@ -69,7 +69,7 @@ export default function Explore() {
             <p className="text-muted-foreground mb-4">
               Be the first to propose an improvement to your city!
             </p>
-            {user && (
+            {isAuthenticated && (
               <Button asChild>
                 <Link to="/propose">
                   <Plus className="mr-2 h-4 w-4" />
@@ -101,14 +101,14 @@ export default function Explore() {
             Discover and support proposals for your city
           </p>
         </div>
-        {user && (
-          <Button asChild>
-            <Link to="/propose">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Proposal
-            </Link>
-          </Button>
-        )}
+            {isAuthenticated && (
+              <Button asChild>
+                <Link to="/propose">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Proposal
+                </Link>
+              </Button>
+            )}
       </div>
 
       {/* Search */}
