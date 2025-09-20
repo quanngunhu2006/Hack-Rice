@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,61 +22,12 @@ export default function Admin() {
   const [moderationAction, setModerationAction] = useState<ModerationAction | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const { toast } = useToast()
-  const queryClient = useQueryClient()
 
-  // Load draft (pending) proposals
-  const { data: pendingProposals, isLoading: proposalsLoading } = useQuery({
-    queryKey: ['admin-pending-proposals'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('proposals')
-        .select('*')
-        .eq('status', 'draft')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data || []
-    }
-  })
-
-  // For now we don't have moderation for reports wired up
+  // Demo data for admin interface
+  const pendingProposals: any[] = []
   const pendingReports: any[] = []
+  const proposalsLoading = false
   const reportsLoading = false
-
-  const approveMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from('proposals')
-        .update({ status: 'published' })
-        .eq('id', proposalId)
-        .select()
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
-      toast({ title: 'Proposal approved', description: 'The proposal is now published.' })
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to approve proposal', variant: 'destructive' })
-    }
-  })
-
-  const rejectMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from('proposals')
-        .update({ status: 'rejected' })
-        .eq('id', proposalId)
-        .select()
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
-      toast({ title: 'Proposal rejected', description: 'The proposal has been rejected.' })
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to reject proposal', variant: 'destructive' })
-    }
-  })
 
   const handleModerationAction = async (item: any, action: 'approve' | 'reject', type: 'proposal' | 'report') => {
     if (action === 'reject') {
@@ -87,21 +36,51 @@ export default function Admin() {
       return
     }
 
-    if (type === 'proposal' && action === 'approve') {
-      approveMutation.mutate(item.id)
+    try {
+      await fetch(`/api/admin/${type}s/${item.id}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: '' })
+      })
+
+      toast({
+        title: `${type} ${action}d`,
+        description: `The ${type} has been ${action}d successfully`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${action} ${type}`,
+        variant: "destructive"
+      })
     }
   }
 
   const handleRejectWithReason = async () => {
     if (!moderationAction || !rejectionReason.trim()) return
 
-    if (moderationAction.type === 'proposal') {
-      rejectMutation.mutate(moderationAction.id)
-    }
+    try {
+      await fetch(`/api/admin/${moderationAction.type}s/${moderationAction.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectionReason })
+      })
 
-    setModerationAction(null)
-    setSelectedItem(null)
-    setRejectionReason('')
+      toast({
+        title: `${moderationAction.type} rejected`,
+        description: "The item has been rejected with reason",
+      })
+
+      setModerationAction(null)
+      setSelectedItem(null)
+      setRejectionReason('')
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject item",
+        variant: "destructive"
+      })
+    }
   }
 
   const getJurisdictionBadge = (item: any) => {
