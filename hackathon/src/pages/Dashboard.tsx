@@ -1,9 +1,12 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Activity, Users, DollarSign, TrendingUp } from 'lucide-react'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useAuth0 } from '@auth0/auth0-react'
+import { Activity, Users, DollarSign, TrendingUp, User, Mail, Calendar } from 'lucide-react'
 
 function Dashboard() {
+  const { user, isAuthenticated } = useAuth0()
   const stats = [
     {
       title: "Total Users",
@@ -75,6 +78,50 @@ function Dashboard() {
             )
           })}
         </div>
+
+        {/* User Profile Section */}
+        {isAuthenticated && user && (
+          <Card>
+            <CardHeader>
+              <CardTitle>User Profile</CardTitle>
+              <CardDescription>Your account information</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 mb-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="text-lg">
+                    {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold">{user.name || 'User'}</h3>
+                  <p className="text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{user.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{user.nickname || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {user.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {user.email_verified ? 'Verified' : 'Unverified'}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
