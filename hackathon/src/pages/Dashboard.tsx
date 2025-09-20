@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth0 } from '@auth0/auth0-react'
 import { Activity, Users, DollarSign, TrendingUp, User, Mail, Calendar } from 'lucide-react'
-import { FileText, Eye, User, LogOut } from 'lucide-react'
+import { FileText, Eye, LogOut } from 'lucide-react'
 
 function Dashboard() {
   const { user, isAuthenticated } = useAuth0()
