@@ -1,6 +1,6 @@
-import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/contexts/AuthContext'
+import { Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 interface ProtectedRouteProps {
@@ -8,22 +8,19 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth0()
+  const { user, loading } = useAuth()
   const location = useLocation()
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="space-y-4 w-full max-w-md">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
       </div>
     )
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

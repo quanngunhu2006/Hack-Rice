@@ -34,7 +34,7 @@ export default function Propose() {
   const [classificationResult, setClassificationResult] = useState<any>(null)
   const { toast } = useToast()
   const navigate = useNavigate()
-  
+
   const form = useForm<ProposalForm>({
     resolver: zodResolver(proposalSchema),
     defaultValues: {
@@ -52,7 +52,7 @@ export default function Propose() {
   // Debounced scope checking
   const debouncedClassify = debounce(async (text: string) => {
     if (text.length < 10) return
-    
+
     try {
       const result = await classifyMutation.mutateAsync({ text })
       setClassificationResult(result)
@@ -81,12 +81,17 @@ export default function Propose() {
 
     try {
       const result = await createProposal.mutateAsync(data)
+      const isPublished = result.status === 'published'
+
       toast({
-        title: "Proposal created!",
-        description: "Your proposal has been submitted successfully.",
+        title: isPublished ? "Proposal published!" : "Proposal saved as draft!",
+        description: isPublished
+          ? "Your proposal has been submitted and is now live for voting."
+          : "Your proposal has been saved as a draft. Complete verification to publish it.",
       })
       navigate(`/proposals/${result.id}`)
     } catch (error) {
+      console.error('Error:', error)
       toast({
         title: "Error",
         description: "Failed to create proposal. Please try again.",
@@ -128,13 +133,18 @@ export default function Propose() {
     const data = form.getValues()
     try {
       const result = await createProposal.mutateAsync(data)
+      const isPublished = result.status === 'published'
+
       toast({
-        title: "Proposal created!",
-        description: "Your proposal has been submitted for review.",
+        title: isPublished ? "Proposal published!" : "Proposal saved as draft!",
+        description: isPublished
+          ? "Your proposal has been submitted for review."
+          : "Your proposal has been saved as a draft. Complete verification to publish it.",
       })
       navigate(`/proposals/${result.id}`)
       setShowOutOfScopeDialog(false)
     } catch (error) {
+      console.error('Error:', error)
       toast({
         title: "Error",
         description: "Failed to create proposal.",

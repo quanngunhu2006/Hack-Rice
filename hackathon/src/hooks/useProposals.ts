@@ -68,18 +68,20 @@ export function useProposal(id: string) {
 
 export function useCreateProposal() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   return useMutation({
     mutationFn: async (proposal: Omit<ProposalInsert, 'author_id'>): Promise<Proposal> => {
       if (!user) throw new Error('Must be authenticated')
 
+      const status = profile?.verified_resident ? 'published' : 'draft'
+
       const { data, error } = await supabase
         .from('proposals')
         .insert([{
           ...proposal,
-          author_id: user.id,
-          status: 'published'
+          author_id: user.sub, // Auth0 uses 'sub' as the user ID
+          status
         }])
         .select()
         .single()
@@ -119,14 +121,14 @@ export function useUserVotes() {
   const { user } = useAuth()
 
   return useQuery({
-    queryKey: ['user-votes', user?.id],
+    queryKey: ['user-votes', user?.sub],
     queryFn: async () => {
       if (!user) return []
 
       const { data, error } = await supabase
         .from('votes')
         .select('proposal_id')
-        .eq('user_id', user.id)
+        .eq('author_id', user.sub)
 
       if (error) throw error
       return data.map(vote => vote.proposal_id)

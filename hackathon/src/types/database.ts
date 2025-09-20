@@ -3,72 +3,96 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          id: string
+          author_id: string // Auth0 user ID (primary key)
+          given_name: string | null
+          family_name: string | null
+          nickname: string | null
+          email_verified: boolean
+          created_at: string
+          updated_at: string
           full_name: string | null
+          email: string
+          picture: string | null
+          connection: string | null
+          // Our custom fields
           address: string | null
           zip: string | null
           verified_resident: boolean
-          created_at: string
-          updated_at: string
         }
         Insert: {
-          id: string
+          author_id?: string // Auth0 user ID (primary key)
+          given_name?: string | null
+          family_name?: string | null
+          nickname?: string | null
+          email_verified?: boolean
+          created_at?: string
+          updated_at?: string
           full_name?: string | null
+          email: string
+          picture?: string | null
+          connection?: string | null
+          // Our custom fields
           address?: string | null
           zip?: string | null
           verified_resident?: boolean
-          created_at?: string
-          updated_at?: string
         }
         Update: {
-          id?: string
+          author_id?: string // Auth0 user ID (primary key)
+          given_name?: string | null
+          family_name?: string | null
+          nickname?: string | null
+          email_verified?: boolean
+          created_at?: string
+          updated_at?: string
           full_name?: string | null
+          email?: string
+          picture?: string | null
+          connection?: string | null
+          // Our custom fields
           address?: string | null
           zip?: string | null
           verified_resident?: boolean
-          created_at?: string
-          updated_at?: string
         }
         Relationships: []
       }
       proposals: {
         Row: {
-          id: string
+          id: string // UUID stored as string
           author_id: string
           title: string
           summary: string
           body_md: string | null
-          category: 'Roads' | 'Sanitation' | 'Parks' | 'Safety' | 'Zoning' | 'Other'
+          category: string // Changed from enum to text for flexibility
           scope_verified: boolean
-          status: 'draft' | 'published' | 'petitioning' | 'approved' | 'rejected'
+          status: string // Changed from enum to text for flexibility
           upvotes: number
           location_hint: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
+          id?: string // UUID stored as string
           author_id: string
           title: string
           summary: string
           body_md?: string | null
-          category: 'Roads' | 'Sanitation' | 'Parks' | 'Safety' | 'Zoning' | 'Other'
+          category: string // Changed from enum to text for flexibility
           scope_verified?: boolean
-          status?: 'draft' | 'published' | 'petitioning' | 'approved' | 'rejected'
+          status?: string // Changed from enum to text for flexibility
           upvotes?: number
           location_hint?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
+          id?: string // UUID stored as string
           author_id?: string
           title?: string
           summary?: string
           body_md?: string | null
-          category?: 'Roads' | 'Sanitation' | 'Parks' | 'Safety' | 'Zoning' | 'Other'
+          category?: string // Changed from enum to text for flexibility
           scope_verified?: boolean
-          status?: 'draft' | 'published' | 'petitioning' | 'approved' | 'rejected'
+          status?: string // Changed from enum to text for flexibility
           upvotes?: number
           location_hint?: string | null
           created_at?: string
@@ -80,27 +104,27 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["author_id"]
           }
         ]
       }
       votes: {
         Row: {
-          id: string
-          proposal_id: string
-          user_id: string
+          id: string // UUID stored as string
+          proposal_id: string // UUID stored as string
+          author_id: string // Auth0 user ID
           created_at: string
         }
         Insert: {
-          id?: string
-          proposal_id: string
-          user_id: string
+          id?: string // UUID stored as string
+          proposal_id: string // UUID stored as string
+          author_id: string // Auth0 user ID
           created_at?: string
         }
         Update: {
-          id?: string
-          proposal_id?: string
-          user_id?: string
+          id?: string // UUID stored as string
+          proposal_id?: string // UUID stored as string
+          author_id?: string // Auth0 user ID
           created_at?: string
         }
         Relationships: [
@@ -112,18 +136,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "votes_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "votes_author_id_fkey"
+            columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["author_id"]
           }
         ]
       }
       road_reports: {
         Row: {
-          id: string
-          user_id: string
+          id: string // UUID stored as string
+          user_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name: string | null
           description: string
@@ -131,8 +155,8 @@ export type Database = {
           created_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
+          id?: string // UUID stored as string
+          user_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name?: string | null
           description: string
@@ -140,8 +164,8 @@ export type Database = {
           created_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
+          id?: string // UUID stored as string
+          user_id?: string // Auth0 user ID
           geom?: any // PostGIS Point type
           street_name?: string | null
           description?: string
@@ -154,7 +178,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["author_id"]
           }
         ]
       }

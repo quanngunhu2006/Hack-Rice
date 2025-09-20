@@ -1,24 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import type { User, Session } from '@supabase/supabase-js'
-import { supabase, auth } from '@/lib/supabase'
+import { useAuth0 } from '@auth0/auth0-react'
+import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/types/database'
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: any // Auth0 user object
   profile: Profile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<any>
-  signUp: (email: string, password: string) => Promise<any>
-  signOut: () => Promise<{ error: any } | void>
+  signOut: () => void
   updateProfile: (updates: Partial<Profile>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const { user: auth0User, isAuthenticated, isLoading: auth0Loading, logout } = useAuth0()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -27,17 +23,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('author_id', userId)
         .single()
 
       if (error) {
-        // If profile doesn't exist, create one
-        if (error.code === 'PGRST116') {
+        // If profile doesn't exist or schema cache is stale, create one
+        if (error.code === 'PGRST116' || error.code === 'PGRST204' || error.code === '406') {
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert([{
-              id: userId,
-              verified_resident: false
+              author_id: userId,
+              email: (auth0User?.email as string) || `${userId}@placeholder.local`,
+              full_name: (auth0User?.name as string) || null,
+              given_name: (auth0User as any)?.given_name || null,
+              family_name: (auth0User as any)?.family_name || null,
+              nickname: (auth0User as any)?.nickname || null,
+              picture: (auth0User?.picture as string) || null,
+              email_verified: Boolean((auth0User as any)?.email_verified),
+              connection: (auth0User?.sub as string)?.split('|')[0] || null
             }])
             .select()
             .single()
@@ -51,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error fetching profile:', error)
         return null
       }
-      
+
       return data
     } catch (error) {
       console.error('Error in fetchProfile:', error)
@@ -60,12 +63,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) throw new Error('No user logged in')
+    if (!auth0User?.sub) throw new Error('No user logged in')
+
+    // Remove author_id from updates if it exists (can't update primary key)
+    const { author_id, ...updateData } = updates
 
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
+      .update(updateData)
+      .eq('author_id', auth0User.sub)
       .select()
       .single()
 
@@ -75,46 +81,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session
-    auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile)
-      }
-      
-      setLoading(false)
-    })
+    const initializeAuth = async () => {
+      if (auth0Loading) return
 
-    // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const userProfile = await fetchProfile(session.user.id)
+      if (isAuthenticated && auth0User) {
+        try {
+          const userProfile = await fetchProfile(auth0User.sub!)
           setProfile(userProfile)
-        } else {
-          setProfile(null)
+        } catch (error) {
+          console.error('Error initializing auth:', error)
         }
-        
-        setLoading(false)
+      } else {
+        setProfile(null)
       }
-    )
 
-    return () => subscription.unsubscribe()
-  }, [])
+      setLoading(false)
+    }
+
+    initializeAuth()
+  }, [auth0User, isAuthenticated, auth0Loading])
 
   const value: AuthContextType = {
-    user,
-    session,
+    user: auth0User,
     profile,
-    loading,
-    signIn: auth.signIn,
-    signUp: auth.signUp,
-    signOut: auth.signOut,
+    loading: loading || auth0Loading,
+    signOut: logout,
     updateProfile,
   }
 
@@ -128,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
+    console.error('useAuth must be used within an AuthProvider')
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context

@@ -74,7 +74,7 @@ export function useCreateRoadReport() {
       if (media_files && media_files.length > 0) {
         for (const file of media_files) {
           const fileExt = file.name.split('.').pop()
-          const fileName = `${user.id}/${Date.now()}.${fileExt}`
+          const fileName = `${user.sub}/${Date.now()}.${fileExt}`
           
           const { error: uploadError } = await storage.uploadFile('media', fileName, file)
           if (uploadError) throw uploadError
@@ -90,7 +90,7 @@ export function useCreateRoadReport() {
       const { data, error } = await supabase
         .from('road_reports')
         .insert([{
-          user_id: user.id,
+          user_id: user.sub,
           geom: geom as any, // PostGIS point
           street_name,
           description,

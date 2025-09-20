@@ -2,7 +2,7 @@
 -- Run this in Supabase SQL editor after setting up the schema
 
 -- Insert sample profiles (these would normally be created by auth)
-INSERT INTO profiles (id, full_name, address, zip, verified_resident) VALUES
+INSERT INTO profiles (author_id, full_name, address, zip, verified_resident) VALUES
 ('550e8400-e29b-41d4-a716-446655440001', 'Sarah Johnson', '1200 Main St, Houston, TX', '77002', true),
 ('550e8400-e29b-41d4-a716-446655440002', 'Michael Chen', '2400 University Blvd, Houston, TX', '77025', true),
 ('550e8400-e29b-41d4-a716-446655440003', 'Emily Rodriguez', '800 Walker St, Houston, TX', '77002', true),
@@ -240,7 +240,7 @@ Poor lighting contributes to:
 );
 
 -- Insert sample votes
-INSERT INTO votes (proposal_id, user_id) VALUES
+INSERT INTO votes (proposal_id, author_id) VALUES
 ('11111111-1111-1111-1111-111111111111', '550e8400-e29b-41d4-a716-446655440002'),
 ('11111111-1111-1111-1111-111111111111', '550e8400-e29b-41d4-a716-446655440003'),
 ('11111111-1111-1111-1111-111111111111', '550e8400-e29b-41d4-a716-446655440004'),
@@ -260,7 +260,7 @@ INSERT INTO votes (proposal_id, user_id) VALUES
 ('66666666-6666-6666-6666-666666666666', '550e8400-e29b-41d4-a716-446655440004');
 
 -- Insert sample road reports (using approximate coordinates for Houston)
-INSERT INTO road_reports (id, user_id, geom, street_name, description, media_urls) VALUES
+INSERT INTO road_reports (id, author_id, geom, street_name, description, media_urls) VALUES
 (
   'a1111111-1111-1111-1111-111111111111',
   '550e8400-e29b-41d4-a716-446655440001',
