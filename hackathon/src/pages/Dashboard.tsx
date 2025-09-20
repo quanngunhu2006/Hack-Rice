@@ -1,43 +1,35 @@
-import { Activity, Users, DollarSign, TrendingUp, User } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Activity, Users, FileText, MapPin, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { supabase } from '@/utils/supabase'
+
+type Proposal = {
+  id: string | number
+  title?: string
+  location?: string
+  created_at?: string
+}
 
 function Dashboard() {
-  const stats = [
-    {
-      title: "Total Users",
-      value: "2,543",
-      change: "+12.5%",
-      icon: Users,
-      trend: "up"
-    },
-    {
-      title: "Revenue",
-      value: "$45,678",
-      change: "+8.2%",
-      icon: DollarSign,
-      trend: "up"
-    },
-    {
-      title: "Active Sessions",
-      value: "1,234",
-      change: "-2.1%",
-      icon: Activity,
-      trend: "down"
-    },
-    {
-      title: "Conversion Rate",
-      value: "3.24%",
-      change: "+0.8%",
-      icon: TrendingUp,
-      trend: "up"
-    }
-  ]
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const recentActivity = [
-    { id: 1, user: "John Doe", action: "Created new project", time: "2 minutes ago" },
-    { id: 2, user: "Jane Smith", action: "Updated profile", time: "5 minutes ago" },
-    { id: 3, user: "Mike Johnson", action: "Completed task", time: "10 minutes ago" },
-    { id: 4, user: "Sarah Wilson", action: "Joined team", time: "15 minutes ago" },
-  ]
+  useEffect(() => {
+    const fetchProposals = async () => {
+      setLoading(true)
+      const { data } = await supabase.from('proposals').select('*').limit(20)
+      setProposals(Array.isArray(data) ? data : [])
+      setLoading(false)
+    }
+    fetchProposals()
+  }, [])
+
+  const stats = useMemo(() => ([
+    { title: 'Total Proposals', value: String(proposals.length), change: '+0%', icon: FileText, trend: 'up' },
+    { title: 'Active Judges', value: '—', change: '+0%', icon: Users, trend: 'up' },
+    { title: 'Nearby Events', value: '—', change: '+0%', icon: MapPin, trend: 'up' },
+    { title: 'Activity', value: loading ? 'Loading' : 'OK', change: '', icon: Activity, trend: 'up' }
+  ]), [proposals, loading])
 
   return (
     <div className="space-y-6">
@@ -68,22 +60,30 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Recent Activity */}
+      {/* Nearby / Recent Proposals */}
       <div className="bg-card p-6 rounded-lg border">
-        <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Proposals Nearby</h2>
+          <Button size="sm" variant="outline" asChild>
+            <a href="/proposals/upload" className="flex items-center gap-2"><Plus className="h-4 w-4"/>New Proposal</a>
+          </Button>
+        </div>
         <div className="space-y-4">
-          {recentActivity.map((activity) => (
-            <div key={activity.id} className="flex items-center space-x-4">
+          {proposals.map((p) => (
+            <div key={String(p.id)} className="flex items-center space-x-4">
               <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
+                <FileText className="h-4 w-4 text-primary" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{activity.user}</p>
-                <p className="text-sm text-muted-foreground">{activity.action}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{p.title ?? `Proposal ${String(p.id)}`}</p>
+                <p className="text-sm text-muted-foreground truncate">{p.location ?? 'Unknown location'}</p>
               </div>
-              <span className="text-sm text-muted-foreground">{activity.time}</span>
+              <span className="text-sm text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</span>
             </div>
           ))}
+          {!loading && proposals.length === 0 && (
+            <p className="text-sm text-muted-foreground">No proposals yet.</p>
+          )}
         </div>
       </div>
     </div>

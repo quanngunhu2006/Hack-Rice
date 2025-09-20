@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Houston City Limits"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-95.823, 29.522],
+          [-95.823, 30.110],
+          [-95.069, 30.110],
+          [-95.069, 29.522],
+          [-95.823, 29.522]
+        ]]
+      }
+    }
+  ]
+}

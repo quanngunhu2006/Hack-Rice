@@ -22,7 +22,7 @@ function Debug() {
       alert('Access Token logged to console!')
     } catch (error) {
       console.error('❌ Token error:', error)
-      alert('Failed to get access token: ' + error.message)
+      alert('Failed to get access token: ' + (error as Error).message)
     }
   }
 
@@ -33,7 +33,7 @@ function Debug() {
       alert('ID Token Claims logged to console!')
     } catch (error) {
       console.error('❌ ID Token error:', error)
-      alert('Failed to get ID token: ' + error.message)
+      alert('Failed to get ID token: ' + (error as Error).message)
     }
   }
 

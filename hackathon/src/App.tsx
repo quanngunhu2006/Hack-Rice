@@ -1,42 +1,46 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import AuthDebug from '@/components/AuthDebug'
-import UserProfile from '@/components/UserProfile'
-import Home from '@/pages/Home'
-import About from '@/pages/About'
-import Contact from '@/pages/Contact'
-import Dashboard from '@/pages/Dashboard'
+import Explore from '@/pages/Explore'
+import ProposalDetail from '@/pages/ProposalDetail'
+import Propose from '@/pages/Propose'
+import MapPage from '@/pages/MapPage'
+import Account from '@/pages/Account'
+import Admin from '@/pages/Admin'
 import Login from '@/pages/Login'
 
 function App() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
+  const { user } = useAuth()
   
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className={isHomePage ? '' : 'lg:ml-64'}>
+      <div className={!isHomePage && user ? 'lg:ml-64' : ''}>
         <div className="container mx-auto px-4 py-8">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
+            <Route path="/" element={<Explore />} />
+            <Route path="/proposals/:id" element={<ProposalDetail />} />
+            <Route path="/propose" element={
+              <ProtectedRoute requireVerified>
+                <Propose />
               </ProtectedRoute>
             } />
-            <Route path="/profile" element={
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/account" element={
               <ProtectedRoute>
-                <div className="py-8">
-                  <UserProfile />
-                </div>
+                <Account />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
               </ProtectedRoute>
             } />
             <Route path="/login" element={<Login />} />
           </Routes>
-          <AuthDebug />
         </div>
       </div>
     </div>
