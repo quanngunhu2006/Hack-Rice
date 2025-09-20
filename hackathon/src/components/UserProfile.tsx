@@ -1,127 +1,177 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Mail, User, Calendar, Shield } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { User, Mail, Calendar, Shield, Edit } from 'lucide-react'
 
 function UserProfile() {
-  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0()
+  const { user, isAuthenticated, isLoading } = useAuth0()
 
-  if (!isAuthenticated || !user) {
-    return null
+  if (isLoading) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="p-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-2">Loading profile...</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
-  const handleGetToken = async () => {
-    try {
-      const token = await getAccessTokenSilently()
-      console.log('🔑 Access Token:', token)
-      alert('Token logged to console! Check Developer Tools → Console')
-    } catch (error) {
-      console.error('❌ Token error:', error)
-      alert('Failed to get access token')
-    }
+  if (!isAuthenticated || !user) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="p-8">
+          <div className="text-center">
+            <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Please log in to view your profile.</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase()
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader className="text-center">
-        <div className="flex flex-col items-center space-y-4">
-          <Avatar className="h-20 w-20">
-            <AvatarFallback className="text-2xl">
-              {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-2xl">{user.name || 'User'}</CardTitle>
-            <p className="text-muted-foreground">{user.email}</p>
-          </div>
-          {user.email_verified && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Shield className="h-3 w-3" />
-              Email Verified
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Mail className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Email</p>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* Profile Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarFallback className="text-2xl">
+                {user.name ? getUserInitials(user.name) : <User className="h-8 w-8" />}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <CardTitle className="text-2xl">{user.name || 'Anonymous User'}</CardTitle>
+              <CardDescription className="flex items-center gap-2 mt-1">
+                <Mail className="h-4 w-4" />
+                {user.email}
+              </CardDescription>
+              <Badge variant="secondary" className="mt-2">
+                <Shield className="h-3 w-3 mr-1" />
+                Verified User
+              </Badge>
             </div>
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
           </div>
+        </CardHeader>
+      </Card>
 
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <User className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Username</p>
-              <p className="text-sm text-muted-foreground">{user.nickname || 'N/A'}</p>
+      {/* Profile Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>
+            Your account details and preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Full Name</label>
+              <div className="flex items-center gap-2 p-2 border rounded-md">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{user.name || 'Not provided'}</span>
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+              <div className="flex items-center gap-2 p-2 border rounded-md">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span>{user.email}</span>
+              </div>
+            </div>
+
+            {user.email_verified && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Email Status</label>
+                <div className="flex items-center gap-2 p-2 border rounded-md">
+                  <Badge variant="default" className="bg-green-100 text-green-800">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {user.updated_at && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                <div className="flex items-center gap-2 p-2 border rounded-md">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{formatDate(user.updated_at)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {user.updated_at && (
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Last Updated</p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(user.updated_at).toLocaleDateString()}
-                </p>
+          {user.nickname && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Nickname</label>
+              <div className="flex items-center gap-2 p-2 border rounded-md">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{user.nickname}</span>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Shield className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">User ID</p>
-              <p className="text-sm text-muted-foreground font-mono text-xs">
-                {user.sub?.split('|')[1] || user.sub}
-              </p>
+          {user.picture && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Profile Picture URL</label>
+              <div className="p-2 border rounded-md bg-muted text-xs font-mono break-all">
+                {user.picture}
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold mb-4">Authentication Tokens</h3>
-          <div className="space-y-3">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                🔑 Access Token
-              </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                Used for API calls to your backend services
-              </p>
-              <Button size="sm" onClick={handleGetToken}>
-                Get Access Token
-              </Button>
-            </div>
-
-            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-              <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">
-                🎫 ID Token
-              </h4>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Contains user identity information (name, email, etc.)
-              </p>
-            </div>
+      {/* Account Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Actions</CardTitle>
+          <CardDescription>
+            Manage your account settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Change Password
+            </Button>
+            <Button variant="outline" size="sm">
+              <Mail className="h-4 w-4 mr-2" />
+              Update Email
+            </Button>
+            <Button variant="outline" size="sm">
+              <Shield className="h-4 w-4 mr-2" />
+              Privacy Settings
+            </Button>
           </div>
-        </div>
-
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold mb-4">Raw User Data</h3>
-          <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-            <pre className="text-xs text-muted-foreground">
-              {JSON.stringify(user, null, 2)}
-            </pre>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

@@ -7,7 +7,10 @@ import { Mail, Github, Chrome, AlertCircle, Loader2, Lock } from 'lucide-react'
 
 function Login() {
   const navigate = useNavigate()
-  const { loginWithRedirect, isAuthenticated, isLoading, error } = useAuth0()
+  const { loginWithRedirect, isAuthenticated, isLoading, error, user } = useAuth0()
+
+  // Debug logging (remove in production)
+  console.log('Login page auth state:', { isAuthenticated, user, isLoading, error })
 
   const handleEmailLogin = () => loginWithRedirect()
 

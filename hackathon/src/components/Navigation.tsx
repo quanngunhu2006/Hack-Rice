@@ -1,30 +1,36 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth0 } from '@auth0/auth0-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Home, Info, Phone, BarChart3, LogIn, LogOut, User } from 'lucide-react'
+import { Home, Info, Phone, BarChart3, LogIn, LogOut, User, Settings } from 'lucide-react'
 
 function Navigation() {
   const location = useLocation()
   const { isAuthenticated, user, logout, loginWithRedirect, isLoading } = useAuth0()
-  const [authState, setAuthState] = useState(isAuthenticated)
 
+  // Monitor authentication state changes
   useEffect(() => {
-    setAuthState(isAuthenticated)
-  }, [isAuthenticated])
+    console.log('Navigation Auth state changed:', {
+      isAuthenticated,
+      user,
+      isLoading,
+      userName: user?.name,
+      userEmail: user?.email,
+      timestamp: new Date().toISOString()
+    })
+  }, [isAuthenticated, user, isLoading])
 
   // Debug logging (remove in production)
-  // console.log('Navigation Auth state:', {
-  //   isAuthenticated,
-  //   user,
-  //   isLoading,
-  //   userName: user?.name,
-  //   userEmail: user?.email,
-  //   authState
-  // })
+  console.log('Navigation render - Auth state:', {
+    isAuthenticated,
+    user,
+    isLoading,
+    userName: user?.name,
+    userEmail: user?.email
+  })
 
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -32,6 +38,7 @@ function Navigation() {
     { path: '/contact', label: 'Contact', icon: Phone },
     { path: '/dashboard', label: 'Dashboard', icon: BarChart3, requiresAuth: true },
     { path: '/profile', label: 'Profile', icon: User, requiresAuth: true },
+    { path: '/debug', label: 'Debug', icon: Settings },
   ]
 
   const handleLogin = () => {
@@ -47,7 +54,12 @@ function Navigation() {
   }
 
   const handleRefresh = () => {
-    window.location.reload()
+    // First try to force re-check auth state
+    console.log('Manual refresh triggered - current state:', { isAuthenticated, user, isLoading })
+    // If still not working, reload the page
+    setTimeout(() => {
+      window.location.reload()
+    }, 100)
   }
 
   const getUserInitials = (name: string) => {
@@ -60,7 +72,7 @@ function Navigation() {
         <nav className="flex flex-wrap gap-2">
           {navItems.map(({ path, label, icon: Icon, requiresAuth }) => {
             // Hide auth-required pages if not authenticated
-            if (requiresAuth && !authState) return null
+            if (requiresAuth && !isAuthenticated) return null
 
             return (
               <Button
@@ -84,7 +96,7 @@ function Navigation() {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
               Loading...
             </div>
-          ) : authState ? (
+          ) : isAuthenticated ? (
             <>
               {/* User Profile */}
               <div className="flex items-center gap-2 text-sm">
