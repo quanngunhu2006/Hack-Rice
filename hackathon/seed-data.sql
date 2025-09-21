@@ -11,7 +11,8 @@ INSERT INTO profiles (author_id, full_name, address, zip, verified_resident) VAL
 ('550e8400-e29b-41d4-a716-446655440006', 'James Wilson', '2100 Post Oak Blvd, Houston, TX', '77056', true);
 
 -- Insert sample proposals
-INSERT INTO proposals (id, author_id, title, summary, body_md, category, scope_verified, status, upvotes, location_hint) VALUES
+/* INSERT INTO proposals (id, author_id, title, summary, body_md, category, scope_verified, status, upvotes, location_hint) VALUES */
+INSERT INTO proposals (id,created_at,author_id,title,summary,body_md,category,scope_verified,status,upvotes,location_hint,updated_at) VALUES
 (
   '11111111-1111-1111-1111-111111111111',
   '550e8400-e29b-41d4-a716-446655440001',
