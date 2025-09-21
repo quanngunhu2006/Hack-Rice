@@ -25,18 +25,40 @@ CREATE TABLE profiles (
 );
 
 -- Create proposals table
-CREATE TABLE proposals (
+/*CREATE TABLE proposals (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   author_id TEXT NOT NULL REFERENCES profiles(author_id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   summary TEXT NOT NULL CHECK (LENGTH(summary) <= 280),
   body_md TEXT,
   category TEXT NOT NULL, -- or proposal_category if using ENUM
- 
+  
   
   location_hint TEXT,
   
+);*/
+CREATE TABLE public.proposals (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  author_id text DEFAULT ''::text,
+  title text DEFAULT ''::text,
+  summary text DEFAULT ''::text,
+  body_md text DEFAULT ''::text,
+  category USER-DEFINED,
+  scope_verified boolean,
+  status USER-DEFINED,
+  upvotes integer,
+  location_hint text DEFAULT ''::text,
+  updated_at timestamp with time zone DEFAULT (now() AT TIME ZONE 'utc'::text),
+  CONSTRAINT proposals2_pkey PRIMARY KEY (id),
+  CONSTRAINT proposals2_uid_fkey FOREIGN KEY (uid) REFERENCES auth.users(id),
+  CONSTRAINT proposals2_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(author_id)
 );
+
+
+
+
+
 
 -- Create votes table (one vote per user per proposal)
 CREATE TABLE votes (
