@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
@@ -67,19 +67,59 @@ const createHeatmapIcon = (intensity: number) => {
 // Houston center coordinates
 const HOUSTON_CENTER = [29.7604, -95.3698] as [number, number]
 
-// Demo heatmap data points
-const DEMO_HEATMAP_DATA = [
-  { lat: 29.7604, lng: -95.3698, intensity: 0.8 }, // Downtown
-  { lat: 29.7749, lng: -95.4194, intensity: 0.6 }, // Richmond/Gessner
-  { lat: 29.7340, lng: -95.3890, intensity: 0.7 }, // Westheimer
-  { lat: 29.8016, lng: -95.3445, intensity: 0.5 }, // North Shepherd
-  { lat: 29.7372, lng: -95.3963, intensity: 0.9 }, // Bissonnet
-  { lat: 29.7792, lng: -95.3518, intensity: 0.4 }, // Washington Ave
-  { lat: 29.7589, lng: -95.3876, intensity: 0.6 }, // Louisiana St
-  { lat: 29.7654, lng: -95.3712, intensity: 0.8 }, // McKinney St
-  { lat: 29.7445, lng: -95.4010, intensity: 0.5 }, // Southwest Freeway
-  { lat: 29.7890, lng: -95.3290, intensity: 0.7 }, // Heights area
-]
+// Generate heatmap data from road reports
+const generateHeatmapData = (reports: Report[]) => {
+  if (reports.length === 0) return []
+  
+  // Group reports by proximity to create heatmap points
+  const heatmapPoints: Array<{lat: number, lng: number, intensity: number}> = []
+  const processedReports = new Set<number>()
+  
+  reports.forEach((report) => {
+    if (processedReports.has(report.id)) return
+    
+    // Find nearby reports within ~0.01 degrees (roughly 1km)
+    const nearbyReports = reports.filter(otherReport => {
+      if (otherReport.id === report.id) return false
+      
+      const latDiff = Math.abs(report.lat - otherReport.lat)
+      const lngDiff = Math.abs(report.lng - otherReport.lng)
+      const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff)
+      
+      return distance < 0.01 // ~1km radius
+    })
+    
+    // Calculate intensity based on number of nearby reports
+    const nearbyCount = nearbyReports.length + 1 // +1 for the current report
+    const intensity = Math.min(0.2 + (nearbyCount * 0.15), 1.0) // Scale from 0.2 to 1.0
+    
+    // Calculate center point of the cluster
+    let centerLat = report.lat
+    let centerLng = report.lng
+    
+    if (nearbyReports.length > 0) {
+      const allLats = [report.lat, ...nearbyReports.map(r => r.lat)]
+      const allLngs = [report.lng, ...nearbyReports.map(r => r.lng)]
+      
+      centerLat = allLats.reduce((sum, lat) => sum + lat, 0) / allLats.length
+      centerLng = allLngs.reduce((sum, lng) => sum + lng, 0) / allLngs.length
+      
+      // Mark all nearby reports as processed
+      nearbyReports.forEach(r => processedReports.add(r.id))
+    }
+    
+    processedReports.add(report.id)
+    
+    heatmapPoints.push({
+      lat: centerLat,
+      lng: centerLng,
+      intensity: intensity
+    })
+  })
+  
+  return heatmapPoints
+}
+
 
 
 
@@ -184,7 +224,15 @@ function ReportDetailModal({
                         className="w-full h-24 object-cover rounded-lg border border-gray-200"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
+                          console.error('❌ Modal image failed to load:', {
+                            src: target.src,
+                            alt: target.alt,
+                            reportId: report.id
+                          });
                           target.style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Modal image loaded successfully:', url);
                         }}
                       />
                     </div>
@@ -219,7 +267,7 @@ function ReportDetailModal({
               Close
             </Button>
           </div>
-        </div>
+          </div>
       </DialogContent>
 
       {/* Confirmation dialog */}
@@ -253,7 +301,7 @@ function ReportDetailModal({
                 'Delete'
               )}
             </Button>
-          </div>
+        </div>
         </DialogContent>
       </Dialog>
     </Dialog>
@@ -268,6 +316,19 @@ export default function MapPage() {
     description: '',
     media_files: [] as File[]
   })
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+    display_name: string
+    lat: string
+    lon: string
+    address: {
+      road?: string
+      city?: string
+      state?: string
+      postcode?: string
+    }
+  }>>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
   const [showReports, setShowReports] = useState(true)
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [roadReports, setRoadReports] = useState<Report[]>([])
@@ -276,6 +337,11 @@ export default function MapPage() {
 
   const { isAuthenticated, user } = useAuth0()
   const { toast } = useToast()
+
+  // Generate heatmap data from road reports (memoized for performance)
+  const heatmapData = useMemo(() => {
+    return generateHeatmapData(roadReports)
+  }, [roadReports])
 
 
   const handleReportClick = (report: Report) => {
@@ -313,60 +379,78 @@ export default function MapPage() {
     }
   }
 
-  // Geocoding function to convert address to coordinates
-  const geocodeAddress = async (address: string): Promise<{lat: number, lng: number} | null> => {
+
+  // Address autocomplete search function
+  const searchAddressSuggestions = async (query: string) => {
+    if (query.length < 3) {
+      setAddressSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    setIsSearching(true)
     try {
-      // Using OpenStreetMap Nominatim API (free, no API key required)
+      // Using OpenStreetMap Nominatim API for autocomplete
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Houston, TX')}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Houston, TX')}&limit=5&addressdetails=1&bounded=1&viewbox=-95.8,29.5,-95.0,30.0`
       )
       const data = await response.json()
       
       if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon)
-        }
+        setAddressSuggestions(data)
+        setShowSuggestions(true)
+      } else {
+        setAddressSuggestions([])
+        setShowSuggestions(false)
       }
-      return null
     } catch (error) {
-      console.error('Geocoding error:', error)
-      return null
+      console.error('Address search error:', error)
+      setAddressSuggestions([])
+      setShowSuggestions(false)
+    } finally {
+      setIsSearching(false)
     }
   }
 
-  // Handle address geocoding
-  const handleAddressGeocode = async () => {
-    if (!reportForm.address.trim()) {
-      toast({
-        title: "Address required",
-        description: "Please enter an address to geocode",
-        variant: "destructive"
-      })
-      return
+  // Handle address input change with debouncing
+  const handleAddressChange = (value: string) => {
+    setReportForm({ ...reportForm, address: value })
+    setSelectedLocation(null) // Clear selected location when address changes
+    
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      searchAddressSuggestions(value)
+    }, 300)
+    
+    return () => clearTimeout(timeoutId)
+  }
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion: {
+    display_name: string
+    lat: string
+    lon: string
+    address?: {
+      road?: string
+      city?: string
+      state?: string
+      postcode?: string
     }
+  }) => {
+    const address = suggestion.display_name
+    const coords = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)] as [number, number]
+    
+    setReportForm({ ...reportForm, address })
+    setSelectedLocation(coords)
+    setShowSuggestions(false)
+    setAddressSuggestions([])
 
     toast({
-      title: "Geocoding address...",
-      description: "Finding coordinates for the address",
+      title: "Location selected!",
+      description: `Coordinates: ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`,
     })
-
-    const coords = await geocodeAddress(reportForm.address)
-    
-    if (coords) {
-      setSelectedLocation([coords.lat, coords.lng])
-      toast({
-        title: "Location found!",
-        description: `Coordinates: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
-      })
-    } else {
-      toast({
-        title: "Address not found",
-        description: "Could not find coordinates for this address. Please try a different address.",
-        variant: "destructive"
-      })
-    }
   }
+
 
   const handleSubmitReport = async () => {
     // Validation
@@ -381,7 +465,7 @@ export default function MapPage() {
 
     if (!reportForm.description.trim()) {
       toast({
-        title: "Description required", 
+        title: "Description required",
         description: "Please provide a description of the issue",
         variant: "destructive"
       })
@@ -407,6 +491,21 @@ export default function MapPage() {
     }
 
     try {
+      console.log('📝 Submitting report with data:', {
+        address: reportForm.address.trim(),
+        description: reportForm.description.trim(),
+        media_files_count: reportForm.media_files.length,
+        media_files: reportForm.media_files.map(f => ({
+          name: f.name,
+          type: f.type,
+          size: f.size
+        })),
+        coordinates: {
+          lat: selectedLocation[0],
+          lng: selectedLocation[1]
+        }
+      })
+
       // Create report in Supabase with Auth0 user data
       const newReport = await RoadReportsAPI.createReport({
         address: reportForm.address.trim(),
@@ -448,19 +547,21 @@ export default function MapPage() {
       })
 
       // Success message
-      toast({
+    toast({
         title: "Report submitted successfully!",
         description: `Thank you ${userName}! Report #${newReport.id} has been added to the map`,
-      })
+    })
 
-      // Reset form
-      setReportForm({
+    // Reset form
+    setReportForm({
         address: '',
-        description: '',
-        media_files: []
-      })
-      setSelectedLocation(null)
-      setShowAddReport(false)
+      description: '',
+      media_files: []
+    })
+    setSelectedLocation(null)
+      setAddressSuggestions([])
+      setShowSuggestions(false)
+    setShowAddReport(false)
 
     } catch (error) {
       console.error('Error submitting report:', error)
@@ -474,6 +575,11 @@ export default function MapPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
+    console.log('📁 Files selected:', files.map(f => ({
+      name: f.name,
+      type: f.type,
+      size: f.size
+    })))
     setReportForm({ ...reportForm, media_files: files })
   }
 
@@ -515,6 +621,19 @@ export default function MapPage() {
   useEffect(() => {
     loadReportsFromSupabase()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('.address-autocomplete')) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <div className="h-screen flex flex-col">
@@ -562,33 +681,74 @@ export default function MapPage() {
                   </DialogHeader>
                   
                   <div className="space-y-4">
-                    {/* Address field - MANDATORY */}
+                    {/* Address field with autocomplete - MANDATORY */}
                     <div className="space-y-2">
                       <Label htmlFor="address">Address *</Label>
-                      <div className="flex gap-2">
+                      <div className="relative address-autocomplete">
                         <Input
                           id="address"
-                          placeholder="123 Main St, Houston, TX"
+                          placeholder="Start typing an address..."
                           value={reportForm.address}
-                          onChange={(e) => setReportForm({ ...reportForm, address: e.target.value })}
+                          onChange={(e) => handleAddressChange(e.target.value)}
+                          onFocus={() => {
+                            if (addressSuggestions.length > 0) {
+                              setShowSuggestions(true)
+                            }
+                          }}
+                          onBlur={() => {
+                            // Delay hiding suggestions to allow clicking on them
+                            setTimeout(() => setShowSuggestions(false), 200)
+                          }}
                           className="flex-1"
+                          autoComplete="off"
                         />
-                        <Button 
-                          type="button"
-                          variant="outline" 
-                          onClick={handleAddressGeocode}
-                          disabled={!reportForm.address.trim()}
-                        >
-                          Find Location
-                        </Button>
+                        
+                        {/* Loading indicator */}
+                        {isSearching && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        
+                        {/* Address suggestions dropdown */}
+                        {showSuggestions && addressSuggestions.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            {addressSuggestions.map((suggestion, index) => (
+                              <div
+                                key={index}
+                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => handleSuggestionSelect(suggestion)}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {suggestion.display_name}
+                                    </p>
+                                    {suggestion.address && (
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {suggestion.address.road && `${suggestion.address.road}, `}
+                                        {suggestion.address.city && `${suggestion.address.city}, `}
+                                        {suggestion.address.state && `${suggestion.address.state} `}
+                                        {suggestion.address.postcode}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Location status */}
                     <div className="text-sm text-muted-foreground">
                       {selectedLocation 
-                        ? `Location found: ${selectedLocation[0].toFixed(4)}, ${selectedLocation[1].toFixed(4)}` 
-                        : "Enter address and click 'Find Location'"
+                        ? `✅ Location selected: ${selectedLocation[0].toFixed(4)}, ${selectedLocation[1].toFixed(4)}` 
+                        : reportForm.address.length > 0 
+                          ? "Type to search for addresses, then select from dropdown"
+                          : "Start typing an address to see suggestions"
                       }
                     </div>
                     
@@ -677,8 +837,49 @@ export default function MapPage() {
                           <MapPin className="h-3 w-3" />
                           {report.street_name}
                         </div>
-                      </div>
+                    </div>
                   </div>
+                  
+                  {/* Show images if they exist */}
+                    {report.media_urls && report.media_urls.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Badge variant="secondary" className="text-xs">
+                        {report.media_urls.length} photo(s)
+                      </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {report.media_urls.slice(0, 2).map((url, index) => (
+                          <div key={index} className="relative">
+                            <img 
+                              src={url} 
+                              alt={`Report image ${index + 1}`}
+                              className="w-full h-16 object-cover rounded border border-gray-200"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                console.error('❌ Image failed to load:', {
+                                  src: target.src,
+                                  alt: target.alt,
+                                  reportId: report.id
+                                });
+                                target.style.display = 'none';
+                              }}
+                              onLoad={() => {
+                                console.log('✅ Image loaded successfully:', url);
+                              }}
+                            />
+                  </div>
+                        ))}
+                        {report.media_urls.length > 2 && (
+                          <div className="flex items-center justify-center bg-gray-100 rounded border border-gray-200 h-16">
+                            <span className="text-xs text-muted-foreground">
+                              +{report.media_urls.length - 2} more
+                            </span>
+                    </div>
+                  )}
+                      </div>
+                    </div>
+                  )}
                   
                     <div className="flex items-center gap-1 text-xs text-muted-foreground border-t pt-2">
                       <Calendar className="h-3 w-3" />
@@ -698,7 +899,7 @@ export default function MapPage() {
           ))}
 
           {/* Heatmap visualization */}
-          {showHeatmap && DEMO_HEATMAP_DATA.map((point, index) => (
+          {showHeatmap && heatmapData.map((point, index) => (
             <Marker
               key={`heatmap-${index}`}
               position={[point.lat, point.lng]}
@@ -742,10 +943,10 @@ export default function MapPage() {
         <div className="flex justify-between items-center">
           <span>
             {roadReports.length} reports loaded
-            {showHeatmap && ` • ${DEMO_HEATMAP_DATA.length} heatmap points`}
+            {showHeatmap && ` • ${heatmapData.length} heatmap points`}
           </span>
           <span>
-              Click "Add Report" and enter an address to place a pin • Reports must be inside Houston city limits
+               Click "Add Report" and type an address to see suggestions • Reports must be inside Houston city limits
           </span>
         </div>
       </div>
