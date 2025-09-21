@@ -66,6 +66,7 @@ export type Database = {
           scope_verified: boolean
           status: string // Changed from enum to text for flexibility
           upvotes: number
+          downvotes: number
           location_hint: string | null
           created_at: string
           updated_at: string
@@ -80,6 +81,7 @@ export type Database = {
           scope_verified?: boolean
           status?: string // Changed from enum to text for flexibility
           upvotes?: number
+          downvotes?: number
           location_hint?: string | null
           created_at?: string
           updated_at?: string
@@ -94,6 +96,7 @@ export type Database = {
           scope_verified?: boolean
           status?: string // Changed from enum to text for flexibility
           upvotes?: number
+          downvotes?: number
           location_hint?: string | null
           created_at?: string
           updated_at?: string
@@ -113,18 +116,21 @@ export type Database = {
           id: string // UUID stored as string
           proposal_id: string // UUID stored as string
           author_id: string // Auth0 user ID
+          vote_type: 'up' | 'down'
           created_at: string
         }
         Insert: {
           id?: string // UUID stored as string
           proposal_id: string // UUID stored as string
           author_id: string // Auth0 user ID
+          vote_type?: 'up' | 'down'
           created_at?: string
         }
         Update: {
           id?: string // UUID stored as string
           proposal_id?: string // UUID stored as string
           author_id?: string // Auth0 user ID
+          vote_type?: 'up' | 'down'
           created_at?: string
         }
         Relationships: [
@@ -146,8 +152,8 @@ export type Database = {
       }
       road_reports: {
         Row: {
-          id: string // UUID stored as string
-          user_id: string // Auth0 user ID
+          id: number // int4 auto-incrementing primary key
+          author_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name: string | null
           description: string
@@ -155,8 +161,8 @@ export type Database = {
           created_at: string
         }
         Insert: {
-          id?: string // UUID stored as string
-          user_id: string // Auth0 user ID
+          id?: number // int4 auto-incrementing (optional for insert)
+          author_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name?: string | null
           description: string
@@ -164,8 +170,8 @@ export type Database = {
           created_at?: string
         }
         Update: {
-          id?: string // UUID stored as string
-          user_id?: string // Auth0 user ID
+          id?: number // int4 auto-incrementing
+          author_id?: string // Auth0 user ID
           geom?: any // PostGIS Point type
           street_name?: string | null
           description?: string
@@ -174,8 +180,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "road_reports_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "road_reports_author_id_fkey"
+            columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["author_id"]
@@ -190,10 +196,12 @@ export type Database = {
       cast_vote: {
         Args: {
           proposal_id: string
+          vote_direction?: 'up' | 'down'
         }
         Returns: {
           success: boolean
           message: string
+          vote_type: 'up' | 'down' | null
         }
       }
       get_road_reports_in_bbox: {
@@ -246,8 +254,8 @@ export interface CastVoteResponse {
 }
 
 export interface RoadReportWithCoords {
-  id: string
-  user_id: string
+  id: number
+  author_id: string
   street_name: string | null
   description: string
   media_urls: string[] | null

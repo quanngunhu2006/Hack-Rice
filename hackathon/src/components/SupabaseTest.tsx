@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUpvote, useDownvote, useUserVotes } from '@/hooks/useProposals'
 
 export default function SupabaseTest() {
   const [connectionStatus, setConnectionStatus] = useState<string>('Not tested')
   const [proposals, setProposals] = useState<any[]>([])
   const [authStatus, setAuthStatus] = useState<string>('Checking...')
   const [testInsert, setTestInsert] = useState<string>('Not tested')
+  const [voteTest, setVoteTest] = useState<string>('Not tested')
+  const [testProposalId, setTestProposalId] = useState<string>('')
+
   const { user, profile, loading } = useAuth()
+  const upvoteMutation = useUpvote()
+  const downvoteMutation = useDownvote()
+  const { data: userVotes } = useUserVotes()
 
   const testAuth = async () => {
     if (loading) {
@@ -201,6 +208,98 @@ export default function SupabaseTest() {
     }
   }
 
+  const testVotingSystem = async () => {
+    try {
+      setVoteTest('Testing voting system...')
+
+      if (!user) {
+        setVoteTest('Error: User not authenticated')
+        return
+      }
+
+      if (!profile?.verified_resident) {
+        setVoteTest('Error: User is not a verified resident')
+        return
+      }
+
+      // First, get a test proposal to vote on
+      const { data: testProposals, error: fetchError } = await supabase
+        .from('proposals')
+        .select('*')
+        .limit(1)
+
+      if (fetchError) {
+        setVoteTest(`Error fetching test proposal: ${fetchError.message}`)
+        return
+      }
+
+      if (!testProposals || testProposals.length === 0) {
+        setVoteTest('Error: No proposals found to test voting on')
+        return
+      }
+
+      const testProposal = testProposals[0]
+      setTestProposalId(testProposal.id)
+
+      // Test upvote
+      setVoteTest('Testing upvote...')
+      try {
+        await upvoteMutation.mutateAsync(testProposal.id)
+        setVoteTest('Upvote successful!')
+      } catch (error: any) {
+        setVoteTest(`Upvote failed: ${error.message}`)
+        return
+      }
+
+      // Check user's vote
+      const userVote = userVotes?.find(vote => vote.proposal_id === testProposal.id)
+      if (!userVote || userVote.vote_type !== 'up') {
+        setVoteTest('Error: Upvote not recorded correctly')
+        return
+      }
+
+      // Test switching to downvote
+      setVoteTest('Testing vote switch to downvote...')
+      try {
+        await downvoteMutation.mutateAsync(testProposal.id)
+        setVoteTest('Downvote successful!')
+      } catch (error: any) {
+        setVoteTest(`Downvote failed: ${error.message}`)
+        return
+      }
+
+      // Check user's vote again
+      const userVote2 = userVotes?.find(vote => vote.proposal_id === testProposal.id)
+      if (!userVote2 || userVote2.vote_type !== 'down') {
+        setVoteTest('Error: Downvote not recorded correctly')
+        return
+      }
+
+      // Test removing vote
+      setVoteTest('Testing vote removal...')
+      try {
+        await downvoteMutation.mutateAsync(testProposal.id)
+        setVoteTest('Vote removal successful!')
+      } catch (error: any) {
+        setVoteTest(`Vote removal failed: ${error.message}`)
+        return
+      }
+
+      // Final check
+      const userVote3 = userVotes?.find(vote => vote.proposal_id === testProposal.id)
+      if (userVote3) {
+        setVoteTest('Error: Vote should have been removed')
+        return
+      }
+
+      setVoteTest('✅ Voting system test PASSED! All operations work correctly.')
+
+    } catch (error) {
+      setVoteTest(`Voting test failed: ${error}`)
+      console.error('Voting test error:', error)
+    }
+  }
+
   return (
     <div className="p-4 border rounded-lg space-y-4">
       <h3 className="text-lg font-semibold">Supabase Connection Test</h3>
@@ -267,6 +366,22 @@ export default function SupabaseTest() {
           </button>
         </div>
         <p className="text-sm text-gray-600">Insert Status: {testInsert}</p>
+      </div>
+
+      {/* Voting Test */}
+      <div className="border-t pt-2">
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={testVotingSystem}
+            className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
+          >
+            Test Voting System
+          </button>
+        </div>
+        <p className="text-sm text-gray-600">Voting Test: {voteTest}</p>
+        {testProposalId && (
+          <p className="text-xs text-gray-500">Test Proposal ID: {testProposalId}</p>
+        )}
       </div>
 
       {proposals.length > 0 && (

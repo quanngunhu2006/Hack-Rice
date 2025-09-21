@@ -1,123 +1,137 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useToast } from '@/hooks/useToast'
-import { CheckCircle, XCircle, AlertTriangle, FileText, MapPin, Calendar, User } from 'lucide-react'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/useToast";
+import { supabase } from "@/lib/supabase";
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  FileText,
+  MapPin,
+  Calendar,
+  User,
+} from "lucide-react";
 
 interface ModerationAction {
-  id: string
-  type: 'proposal' | 'report'
-  action: 'approve' | 'reject'
-  reason?: string
+  id: string;
+  type: "proposal" | "report";
+  action: "approve" | "reject";
+  reason?: string;
 }
 
 export default function Admin() {
-  const [, setSelectedItem] = useState<any>(null)
-  const [moderationAction, setModerationAction] = useState<ModerationAction | null>(null)
-  const [rejectionReason, setRejectionReason] = useState('')
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
+  const [, setSelectedItem] = useState<any>(null);
+  const [moderationAction, setModerationAction] =
+    useState<ModerationAction | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const { toast } = useToast();
 
   // Load draft (pending) proposals
-  const { data: pendingProposals, isLoading: proposalsLoading } = useQuery({
-    queryKey: ['admin-pending-proposals'],
+  const { data: pendingProposals, isLoading: pendingProposalsLoading } = useQuery({
+    queryKey: ["admin-pending-proposals"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('proposals')
-        .select('*, profiles:profiles(full_name, nickname)')
-        .eq('status', 'draft')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data || []
-    }
-  })
+        .from("proposals")
+        .select("*, profiles:profiles(full_name, nickname)")
+        .eq("status", "draft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // For now we don't have moderation for reports wired up
-  const pendingReports: any[] = []
-  const reportsLoading = false
+  const pendingReports: any[] = [];
+  const reportsLoading = false;
 
-  const approveMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from('proposals')
-        .update({ status: 'published', scope_verified: true })
-        .eq('id', proposalId)
-        .select()
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
-      queryClient.invalidateQueries({ queryKey: ['proposals'] })
-      queryClient.invalidateQueries({ queryKey: ['proposal'] })
-      toast({ title: 'Proposal approved', description: 'The proposal is now published.' })
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to approve proposal', variant: 'destructive' })
-    }
-  })
 
-  const rejectMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from('proposals')
-        .update({ status: 'rejected' })
-        .eq('id', proposalId)
-        .select()
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
-      queryClient.invalidateQueries({ queryKey: ['proposals'] })
-      queryClient.invalidateQueries({ queryKey: ['proposal'] })
-      toast({ title: 'Proposal rejected', description: 'The proposal has been rejected.' })
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to reject proposal', variant: 'destructive' })
-    }
-  })
 
-  const handleModerationAction = async (item: any, action: 'approve' | 'reject', type: 'proposal' | 'report') => {
-    if (action === 'reject') {
-      setSelectedItem(item)
-      setModerationAction({ id: item.id, type, action })
-      return
+  const handleModerationAction = async (
+    item: any,
+    action: "approve" | "reject",
+    type: "proposal" | "report"
+  ) => {
+    if (action === "reject") {
+      setSelectedItem(item);
+      setModerationAction({ id: item.id, type, action });
+      return;
     }
 
-    if (type === 'proposal' && action === 'approve') {
-      approveMutation.mutate(item.id)
+    try {
+      await fetch(`/api/admin/${type}s/${item.id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "" }),
+      });
+
+      toast({
+        title: `${type} ${action}d`,
+        description: `The ${type} has been ${action}d successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${action} ${type}`,
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleRejectWithReason = async () => {
-    if (!moderationAction || !rejectionReason.trim()) return
+    if (!moderationAction || !rejectionReason.trim()) return;
 
-    if (moderationAction.type === 'proposal') {
-      rejectMutation.mutate(moderationAction.id)
+    try {
+      await fetch(
+        `/api/admin/${moderationAction.type}s/${moderationAction.id}/reject`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: rejectionReason }),
+        }
+      );
+
+      toast({
+        title: `${moderationAction.type} rejected`,
+        description: "The item has been rejected with reason",
+      });
+
+      setModerationAction(null);
+      setSelectedItem(null);
+      setRejectionReason("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject item",
+        variant: "destructive",
+      });
     }
-
-    setModerationAction(null)
-    setSelectedItem(null)
-    setRejectionReason('')
-  }
+  };
 
   const getJurisdictionBadge = (item: any) => {
-    if (item.jurisdiction === 'city') {
-      return <Badge className="bg-green-500">City Level</Badge>
-    } else if (item.jurisdiction === 'state') {
-      return <Badge className="bg-yellow-500">State Level</Badge>
-    } else if (item.jurisdiction === 'federal') {
-      return <Badge className="bg-red-500">Federal Level</Badge>
+    if (item.jurisdiction === "city") {
+      return <Badge className="bg-green-500">City Level</Badge>;
+    } else if (item.jurisdiction === "state") {
+      return <Badge className="bg-yellow-500">State Level</Badge>;
+    } else if (item.jurisdiction === "federal") {
+      return <Badge className="bg-red-500">Federal Level</Badge>;
     }
-    return <Badge variant="secondary">Unknown</Badge>
-  }
+    return <Badge variant="secondary">Unknown</Badge>;
+  };
 
   const renderProposalCard = (proposal: any) => (
     <Card key={proposal.id}>
@@ -131,21 +145,23 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               className="text-green-600 border-green-600 hover:bg-green-50"
-              onClick={() => handleModerationAction(proposal, 'approve', 'proposal')}
-            >
+              onClick={() =>
+                handleModerationAction(proposal, "approve", "proposal")
+              }>
               <CheckCircle className="mr-1 h-4 w-4" />
               Approve
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               className="text-red-600 border-red-600 hover:bg-red-50"
-              onClick={() => handleModerationAction(proposal, 'reject', 'proposal')}
-            >
+              onClick={() =>
+                handleModerationAction(proposal, "reject", "proposal")
+              }>
               <XCircle className="mr-1 h-4 w-4" />
               Reject
             </Button>
@@ -154,11 +170,11 @@ export default function Admin() {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-3">{proposal.summary}</p>
-        
+
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            {proposal.author_name || 'Anonymous'}
+            {proposal.author_name || "Anonymous"}
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
@@ -179,7 +195,7 @@ export default function Admin() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 
   const renderReportCard = (report: any) => (
     <Card key={report.id}>
@@ -193,26 +209,30 @@ export default function Admin() {
             <div className="flex gap-2">
               {getJurisdictionBadge(report)}
               {report.media_urls && report.media_urls.length > 0 && (
-                <Badge variant="secondary">{report.media_urls.length} photo(s)</Badge>
+                <Badge variant="secondary">
+                  {report.media_urls.length} photo(s)
+                </Badge>
               )}
             </div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               className="text-green-600 border-green-600 hover:bg-green-50"
-              onClick={() => handleModerationAction(report, 'approve', 'report')}
-            >
+              onClick={() =>
+                handleModerationAction(report, "approve", "report")
+              }>
               <CheckCircle className="mr-1 h-4 w-4" />
               Approve
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               className="text-red-600 border-red-600 hover:bg-red-50"
-              onClick={() => handleModerationAction(report, 'reject', 'report')}
-            >
+              onClick={() =>
+                handleModerationAction(report, "reject", "report")
+              }>
               <XCircle className="mr-1 h-4 w-4" />
               Reject
             </Button>
@@ -220,12 +240,16 @@ export default function Admin() {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-3">{report.description}</p>
-        
+        <p className="text-sm text-muted-foreground mb-3">
+          {report.description}
+        </p>
+
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            {report?.profiles?.full_name || report?.profiles?.nickname || 'Anonymous'}
+            {report?.profiles?.full_name ||
+              report?.profiles?.nickname ||
+              "Anonymous"}
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
@@ -244,7 +268,7 @@ export default function Admin() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 
   return (
     <div className="space-y-6">
@@ -268,7 +292,7 @@ export default function Admin() {
         </TabsList>
 
         <TabsContent value="proposals" className="space-y-4">
-          {proposalsLoading ? (
+          {pendingProposalsLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i}>
@@ -294,9 +318,12 @@ export default function Admin() {
             <Card>
               <CardContent className="py-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No pending proposals</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  No pending proposals
+                </h3>
                 <p className="text-muted-foreground">
-                  All proposals have been reviewed. Check back later for new submissions.
+                  All proposals have been reviewed. Check back later for new
+                  submissions.
                 </p>
               </CardContent>
             </Card>
@@ -327,9 +354,12 @@ export default function Admin() {
             <Card>
               <CardContent className="py-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No pending reports</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  No pending reports
+                </h3>
                 <p className="text-muted-foreground">
-                  All reports have been reviewed. Check back later for new submissions.
+                  All reports have been reviewed. Check back later for new
+                  submissions.
                 </p>
               </CardContent>
             </Card>
@@ -338,16 +368,18 @@ export default function Admin() {
       </Tabs>
 
       {/* Rejection Dialog */}
-      <Dialog open={!!moderationAction} onOpenChange={() => setModerationAction(null)}>
+      <Dialog
+        open={!!moderationAction}
+        onOpenChange={() => setModerationAction(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject {moderationAction?.type}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this {moderationAction?.type}.
-              This will be sent to the author.
+              Please provide a reason for rejecting this{" "}
+              {moderationAction?.type}. This will be sent to the author.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Rejection Reason</Label>
@@ -360,21 +392,20 @@ export default function Admin() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setModerationAction(null)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleRejectWithReason}
               disabled={!rejectionReason.trim()}
-              className="bg-red-600 hover:bg-red-700"
-            >
+              className="bg-red-600 hover:bg-red-700">
               Reject with Reason
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
