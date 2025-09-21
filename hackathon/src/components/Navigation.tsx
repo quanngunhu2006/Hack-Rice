@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { useAuth0 } from '@auth0/auth0-react'
 import { 
   Home, 
-  FileText, 
   Plus, 
   MapPin, 
   User, 
@@ -71,10 +70,8 @@ export default function Navigation() {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r bg-background px-6 py-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <h1 className="text-xl font-bold">CitizenVoice</h1>
+            <img src="/file.svg" alt="CityVoice icon" className="w-15 h-15" />
+            <h1 className="text-xl font-bold">CityVoice</h1>
           </Link>
 
           {/* Navigation */}
@@ -117,9 +114,7 @@ export default function Navigation() {
       <div className="lg:hidden">
         <div className="flex items-center justify-between p-4 border-b bg-background">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/file.svg" alt="CityVoice icon" className="w-10 h-10" />
             <h1 className="text-xl font-bold">CitizenVoice</h1>
           </Link>
 
