@@ -12,20 +12,30 @@ interface ProposalCardProps {
 }
 
 export default function ProposalCard({ proposal }: ProposalCardProps) {
-  const categoryColors = {
-    Roads: 'bg-blue-500',
-    Sanitation: 'bg-green-500',
-    Parks: 'bg-emerald-500',
-    Safety: 'bg-red-500',
-    Zoning: 'bg-purple-500',
-    Other: 'bg-gray-500'
-  }
+  const categoryBadgeColors = {
+    Roads: 'bg-amber-600',
+    Sanitation: 'bg-lime-600',
+    Parks: 'bg-emerald-600',
+    Safety: 'bg-rose-600',
+    Zoning: 'bg-violet-600',
+    Other: 'bg-slate-500'
+  } as const
+
+  // Soft tinted backgrounds per category for the card surface
+  const categoryCardTint = {
+    Roads: 'bg-amber-50',
+    Sanitation: 'bg-lime-50',
+    Parks: 'bg-emerald-50',
+    Safety: 'bg-rose-50',
+    Zoning: 'bg-violet-50',
+    Other: 'bg-slate-50'
+  } as const
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className={`hover:shadow-lg transition-shadow ${categoryCardTint[proposal.category as keyof typeof categoryCardTint]}`}>
       <CardHeader>
         <div className="flex flex-wrap gap-2 mb-2">
-          <Badge className={`${categoryColors[proposal.category]} text-white`}>
+          <Badge className={`${categoryBadgeColors[proposal.category as keyof typeof categoryBadgeColors]} text-white`}>
             {proposal.category}
           </Badge>
           <ScopeBadge 
