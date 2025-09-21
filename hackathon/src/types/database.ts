@@ -66,6 +66,7 @@ export type Database = {
           scope_verified: boolean
           status: string // Changed from enum to text for flexibility
           upvotes: number
+          downvotes: number
           location_hint: string | null
           created_at: string
           updated_at: string
@@ -80,6 +81,7 @@ export type Database = {
           scope_verified?: boolean
           status?: string // Changed from enum to text for flexibility
           upvotes?: number
+          downvotes?: number
           location_hint?: string | null
           created_at?: string
           updated_at?: string
@@ -94,6 +96,7 @@ export type Database = {
           scope_verified?: boolean
           status?: string // Changed from enum to text for flexibility
           upvotes?: number
+          downvotes?: number
           location_hint?: string | null
           created_at?: string
           updated_at?: string
@@ -113,18 +116,21 @@ export type Database = {
           id: string // UUID stored as string
           proposal_id: string // UUID stored as string
           author_id: string // Auth0 user ID
+          vote_type: 'up' | 'down'
           created_at: string
         }
         Insert: {
           id?: string // UUID stored as string
           proposal_id: string // UUID stored as string
           author_id: string // Auth0 user ID
+          vote_type?: 'up' | 'down'
           created_at?: string
         }
         Update: {
           id?: string // UUID stored as string
           proposal_id?: string // UUID stored as string
           author_id?: string // Auth0 user ID
+          vote_type?: 'up' | 'down'
           created_at?: string
         }
         Relationships: [
@@ -190,10 +196,12 @@ export type Database = {
       cast_vote: {
         Args: {
           proposal_id: string
+          vote_direction?: 'up' | 'down'
         }
         Returns: {
           success: boolean
           message: string
+          vote_type: 'up' | 'down' | null
         }
       }
       get_road_reports_in_bbox: {
