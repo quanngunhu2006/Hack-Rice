@@ -146,8 +146,8 @@ export type Database = {
       }
       road_reports: {
         Row: {
-          id: string // UUID stored as string
-          user_id: string // Auth0 user ID
+          id: number // int4 auto-incrementing primary key
+          author_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name: string | null
           description: string
@@ -155,8 +155,8 @@ export type Database = {
           created_at: string
         }
         Insert: {
-          id?: string // UUID stored as string
-          user_id: string // Auth0 user ID
+          id?: number // int4 auto-incrementing (optional for insert)
+          author_id: string // Auth0 user ID
           geom: any // PostGIS Point type
           street_name?: string | null
           description: string
@@ -164,8 +164,8 @@ export type Database = {
           created_at?: string
         }
         Update: {
-          id?: string // UUID stored as string
-          user_id?: string // Auth0 user ID
+          id?: number // int4 auto-incrementing
+          author_id?: string // Auth0 user ID
           geom?: any // PostGIS Point type
           street_name?: string | null
           description?: string
@@ -174,8 +174,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "road_reports_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "road_reports_author_id_fkey"
+            columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["author_id"]
@@ -246,8 +246,8 @@ export interface CastVoteResponse {
 }
 
 export interface RoadReportWithCoords {
-  id: string
-  user_id: string
+  id: number
+  author_id: string
   street_name: string | null
   description: string
   media_urls: string[] | null
