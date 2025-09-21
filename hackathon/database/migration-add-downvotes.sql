@@ -30,6 +30,8 @@ CREATE TABLE votes (
 );
 
 -- Drop the old cast_vote function first to avoid conflicts
+DROP FUNCTION IF EXISTS cast_vote(BIGINT, vote_type, TEXT);
+DROP FUNCTION IF EXISTS cast_vote(BIGINT, vote_type);
 DROP FUNCTION IF EXISTS cast_vote(UUID, vote_type);
 
 -- Update the cast_vote function to handle downvotes
@@ -101,7 +103,7 @@ BEGIN
     RETURN json_build_object('success', true, 'message', 'Vote cast successfully', 'vote_type', vote_direction);
   END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Add index for downvotes column for performance
 CREATE INDEX IF NOT EXISTS idx_proposals_downvotes ON proposals(downvotes);
@@ -115,6 +117,12 @@ CREATE POLICY "Anyone can view votes" ON votes
 
 CREATE POLICY "Users can insert their own votes" ON votes
   FOR INSERT WITH CHECK (auth.uid()::text = author_id);
+
+CREATE POLICY "Users can update their own votes" ON votes
+  FOR UPDATE USING (auth.uid()::text = author_id);
+
+CREATE POLICY "Users can delete their own votes" ON votes
+  FOR DELETE USING (auth.uid()::text = author_id);
 
 -- Recreate indexes for votes table
 CREATE INDEX idx_votes_proposal_id ON votes(proposal_id);

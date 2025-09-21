@@ -101,11 +101,11 @@ export function useUpvote() {
 
   return useMutation({
     mutationFn: async (proposalId: string) => {
-      // Convert proposalId to number for BIGINT parameter
+      // Call with exact parameter names matching function signature
       const { data, error } = await supabase.rpc('cast_vote', {
-        proposal_id: parseInt(proposalId),
+        proposal_id: proposalId,
         vote_direction: 'up',
-        user_id: user?.sub // Pass Auth0 user ID
+        user_id: user?.sub  // Pass the Auth0 user ID
       })
 
       if (error) throw error
@@ -114,9 +114,10 @@ export function useUpvote() {
       return data
     },
     onSuccess: (_, proposalId) => {
-      // Invalidate proposals and specific proposal
+      // Invalidate proposals, specific proposal, and user votes
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
       queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
+      queryClient.invalidateQueries({ queryKey: ['user-votes'] })
     }
   })
 }
@@ -127,11 +128,11 @@ export function useDownvote() {
 
   return useMutation({
     mutationFn: async (proposalId: string) => {
-      // Convert proposalId to number for BIGINT parameter
+      // Call with exact parameter names matching function signature
       const { data, error } = await supabase.rpc('cast_vote', {
-        proposal_id: parseInt(proposalId),
+        proposal_id: proposalId,
         vote_direction: 'down',
-        user_id: user?.sub // Pass Auth0 user ID
+        user_id: user?.sub  // Pass the Auth0 user ID
       })
 
       if (error) throw error
@@ -140,9 +141,10 @@ export function useDownvote() {
       return data
     },
     onSuccess: (_, proposalId) => {
-      // Invalidate proposals and specific proposal
+      // Invalidate proposals, specific proposal, and user votes
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
       queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
+      queryClient.invalidateQueries({ queryKey: ['user-votes'] })
     }
   })
 }

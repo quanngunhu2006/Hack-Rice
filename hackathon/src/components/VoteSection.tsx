@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/AuthContext'
@@ -25,6 +25,7 @@ export default function VoteSection({
   const { toast } = useToast()
   const [optimisticUpvotes, setOptimisticUpvotes] = useState(upvotes)
   const [optimisticDownvotes, setOptimisticDownvotes] = useState(downvotes)
+  const [flashColor, setFlashColor] = useState<string>('')
 
   const upvoteMutation = useUpvote()
   const downvoteMutation = useDownvote()
@@ -32,11 +33,15 @@ export default function VoteSection({
 
   const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
   const isVerified = profile?.verified_resident
-  const totalVotes = optimisticUpvotes + optimisticDownvotes
+  const netScore = optimisticUpvotes - optimisticDownvotes
 
-  // Calculate percentages
-  const upvotePercentage = totalVotes > 0 ? Math.round((optimisticUpvotes / totalVotes) * 100) : 50
-  const downvotePercentage = totalVotes > 0 ? Math.round((optimisticDownvotes / totalVotes) * 100) : 50
+  // Flash animation effect
+  useEffect(() => {
+    if (flashColor) {
+      const timer = setTimeout(() => setFlashColor(''), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [flashColor])
 
   const handleUpvote = async () => {
     if (!user) {
@@ -61,6 +66,9 @@ export default function VoteSection({
       return
     }
 
+    // Flash animation
+    setFlashColor('green')
+
     // Optimistic update
     const isCurrentlyUpvoted = userVote?.vote_type === 'up'
     const isCurrentlyDownvoted = userVote?.vote_type === 'down'
@@ -80,9 +88,10 @@ export default function VoteSection({
     try {
       await upvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
-      // Rollback optimistic update
+      // Rollback optimistic update on error
       setOptimisticUpvotes(upvotes)
       setOptimisticDownvotes(downvotes)
+      setFlashColor('') // Clear flash on error
 
       toast({
         title: "Vote failed",
@@ -115,6 +124,9 @@ export default function VoteSection({
       return
     }
 
+    // Flash animation
+    setFlashColor('red')
+
     // Optimistic update
     const isCurrentlyDownvoted = userVote?.vote_type === 'down'
     const isCurrentlyUpvoted = userVote?.vote_type === 'up'
@@ -134,9 +146,10 @@ export default function VoteSection({
     try {
       await downvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
-      // Rollback optimistic update
+      // Rollback optimistic update on error
       setOptimisticUpvotes(upvotes)
       setOptimisticDownvotes(downvotes)
+      setFlashColor('') // Clear flash on error
 
       toast({
         title: "Vote failed",
@@ -150,16 +163,14 @@ export default function VoteSection({
     if (compact) {
       return (
         <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1">
-            <ArrowUp className={`h-4 w-4 ${userVote?.vote_type === 'up' ? 'text-green-500' : 'text-gray-400'}`} />
-            <span className="text-sm font-medium">{optimisticUpvotes}</span>
+          <div className={`text-sm font-medium ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
+            {netScore}
           </div>
-          <div className="flex items-center gap-1">
-            <ArrowDown className={`h-4 w-4 ${userVote?.vote_type === 'down' ? 'text-red-500' : 'text-gray-400'}`} />
-            <span className="text-sm font-medium">{optimisticDownvotes}</span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {upvotePercentage}% / {downvotePercentage}%
+          <div className="flex items-center gap-2">
+            <ArrowUp className={`h-4 w-4 ${userVote && userVote.vote_type === 'up' ? 'text-green-500' : 'text-gray-400'}`} />
+            <span className="text-xs text-muted-foreground">{optimisticUpvotes}</span>
+            <ArrowDown className={`h-4 w-4 ${userVote && userVote.vote_type === 'down' ? 'text-red-500' : 'text-gray-400'}`} />
+            <span className="text-xs text-muted-foreground">{optimisticDownvotes}</span>
           </div>
         </div>
       )
@@ -167,30 +178,20 @@ export default function VoteSection({
 
     return (
       <div className="space-y-4">
-        {/* Vote counts and percentages */}
+        {/* Vote count in the middle */}
         <div className="text-center">
-          <div className="flex justify-center items-center gap-4 mb-2">
-            <div className="flex items-center gap-2">
-              <ArrowUp className={`h-5 w-5 ${userVote?.vote_type === 'up' ? 'text-green-500' : 'text-gray-400'}`} />
-              <span className="text-2xl font-bold">{optimisticUpvotes}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowDown className={`h-5 w-5 ${userVote?.vote_type === 'down' ? 'text-red-500' : 'text-gray-400'}`} />
-              <span className="text-2xl font-bold">{optimisticDownvotes}</span>
-            </div>
+          <div className={`text-3xl font-bold ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
+            {netScore}
           </div>
           <div className="text-sm text-muted-foreground">
-            {upvotePercentage}% positive • {downvotePercentage}% negative
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {totalVotes} total votes
+            {optimisticUpvotes} positive • {optimisticDownvotes} negative
           </div>
         </div>
 
         {/* Vote buttons */}
         <div className="flex gap-2 justify-center">
           <Button
-            variant={userVote?.vote_type === 'up' ? "default" : "outline"}
+            variant={userVote && userVote.vote_type === 'up' ? "default" : "outline"}
             size="sm"
             onClick={handleUpvote}
             disabled={(!user || !isVerified) || upvoteMutation.isPending || downvoteMutation.isPending}
@@ -200,7 +201,7 @@ export default function VoteSection({
             Upvote
           </Button>
           <Button
-            variant={userVote?.vote_type === 'down' ? "destructive" : "outline"}
+            variant={userVote && userVote.vote_type === 'down' ? "destructive" : "outline"}
             size="sm"
             onClick={handleDownvote}
             disabled={(!user || !isVerified) || upvoteMutation.isPending || downvoteMutation.isPending}
@@ -237,8 +238,8 @@ export default function VoteSection({
         </div>
       </TooltipTrigger>
       <TooltipContent>
-        {userVote?.vote_type === 'up' ? "You've upvoted this proposal" :
-         userVote?.vote_type === 'down' ? "You've downvoted this proposal" :
+        {userVote && userVote.vote_type === 'up' ? "You've upvoted this proposal" :
+         userVote && userVote.vote_type === 'down' ? "You've downvoted this proposal" :
          "Click to vote"}
       </TooltipContent>
     </Tooltip>
