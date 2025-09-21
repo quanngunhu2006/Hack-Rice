@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useState } from 'react'
 import { useProposal } from '@/hooks/useProposals'
 import { useAuth } from '@/contexts/AuthContext'
-import UpvoteButton from '@/components/UpvoteButton'
+import VoteSection from '@/components/VoteSection'
 import ScopeBadge from '@/components/ScopeBadge'
 import MarkdownViewer from '@/components/MarkdownViewer'
 import VerificationWizard from '@/components/VerificationWizard'
@@ -98,7 +98,7 @@ export default function ProposalDetail() {
     console.log('Sign petition for proposal:', proposal.id)
   }
 
-  const categoryColors = {
+  const categoryColors: Record<string, string> = {
     Roads: 'bg-blue-500',
     Sanitation: 'bg-green-500',
     Parks: 'bg-emerald-500',
@@ -190,17 +190,13 @@ export default function ProposalDetail() {
           {/* Voting */}
           <Card>
             <CardHeader>
-              <CardTitle>Support this Proposal</CardTitle>
+              <CardTitle>Community Support</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold">{proposal.upvotes}</div>
-                <div className="text-sm text-muted-foreground">upvotes</div>
-              </div>
-              
-              <UpvoteButton 
+            <CardContent>
+              <VoteSection
                 proposalId={proposal.id}
                 upvotes={proposal.upvotes}
+                downvotes={proposal.downvotes}
                 onUnverifiedClick={handleUpvoteClick}
               />
             </CardContent>

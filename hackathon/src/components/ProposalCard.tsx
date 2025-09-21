@@ -78,9 +78,10 @@ export default function ProposalCard({ proposal }: ProposalCardProps) {
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <UpvoteButton 
+            <UpvoteButton
               proposalId={proposal.id}
               upvotes={proposal.upvotes}
+              downvotes={proposal.downvotes}
               compact
             />
           </div>

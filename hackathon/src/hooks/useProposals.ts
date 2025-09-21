@@ -97,22 +97,54 @@ export function useCreateProposal() {
 
 export function useUpvote() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (proposalId: string) => {
+      // Call with exact parameter names matching function signature
       const { data, error } = await supabase.rpc('cast_vote', {
-        proposal_id: proposalId
+        proposal_id: proposalId,
+        vote_direction: 'up',
+        user_id: user?.sub  // Pass the Auth0 user ID
       })
 
       if (error) throw error
       if (!data.success) throw new Error(data.message)
-      
+
       return data
     },
     onSuccess: (_, proposalId) => {
-      // Invalidate proposals and specific proposal
+      // Invalidate proposals, specific proposal, and user votes
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
       queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
+      queryClient.invalidateQueries({ queryKey: ['user-votes'] })
+    }
+  })
+}
+
+export function useDownvote() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (proposalId: string) => {
+      // Call with exact parameter names matching function signature
+      const { data, error } = await supabase.rpc('cast_vote', {
+        proposal_id: proposalId,
+        vote_direction: 'down',
+        user_id: user?.sub  // Pass the Auth0 user ID
+      })
+
+      if (error) throw error
+      if (!data.success) throw new Error(data.message)
+
+      return data
+    },
+    onSuccess: (_, proposalId) => {
+      // Invalidate proposals, specific proposal, and user votes
+      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
+      queryClient.invalidateQueries({ queryKey: ['user-votes'] })
     }
   })
 }
@@ -127,11 +159,14 @@ export function useUserVotes() {
 
       const { data, error } = await supabase
         .from('votes')
-        .select('proposal_id')
+        .select('proposal_id, vote_type')
         .eq('author_id', user.sub)
 
       if (error) throw error
-      return data.map(vote => vote.proposal_id)
+      return data.map(vote => ({
+        proposal_id: vote.proposal_id,
+        vote_type: vote.vote_type
+      }))
     },
     enabled: !!user
   })
