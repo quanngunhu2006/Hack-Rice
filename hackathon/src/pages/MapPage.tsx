@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/useToast'
 import { useAuth0 } from '@auth0/auth0-react'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { Icon } from 'leaflet'
-import { Plus, MapPin, Calendar, Layers, Info } from 'lucide-react'
+import { Plus, MapPin, Calendar, Layers, Info, Trash2, Loader2 } from 'lucide-react'
+import { RoadReportsAPI } from '@/lib/roadReports-final'
 import 'leaflet/dist/leaflet.css'
 
 // Create modern custom pin icons
@@ -37,7 +38,6 @@ const createCustomPin = (color: string, size: number = 32) => {
 
 // Different pin colors for different types
 const reportPin = createCustomPin('#ef4444', 32) // Red for reports
-const selectedPin = createCustomPin('#3b82f6', 36) // Blue for selected location
 
 // Create a delicate, orangey heatmap visualization
 const createHeatmapIcon = (intensity: number) => {
@@ -81,108 +81,60 @@ const DEMO_HEATMAP_DATA = [
   { lat: 29.7890, lng: -95.3290, intensity: 0.7 }, // Heights area
 ]
 
-// Demo road reports data
-const DEMO_ROAD_REPORTS = [
-  {
-    id: '1',
-    lat: 29.7604,
-    lng: -95.3698,
-    description: 'Large pothole causing traffic to swerve',
-    street_name: 'Main Street',
-    created_at: new Date().toISOString(),
-    media_urls: []
-  },
-  {
-    id: '2', 
-    lat: 29.7749,
-    lng: -95.4194,
-    description: 'Flooding occurs during heavy rain',
-    street_name: 'Richmond Avenue',
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    media_urls: []
-  },
-  {
-    id: '3',
-    lat: 29.7340,
-    lng: -95.3890,
-    description: 'Broken water main created sinkhole',
-    street_name: 'Westheimer Road',
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    media_urls: []
-  },
-  {
-    id: '4',
-    lat: 29.8016,
-    lng: -95.3445,
-    description: 'Road surface deteriorating rapidly',
-    street_name: 'North Shepherd Drive',
-    created_at: new Date(Date.now() - 259200000).toISOString(),
-    media_urls: []
-  },
-  {
-    id: '5',
-    lat: 29.7372,
-    lng: -95.3963,
-    description: 'Standing water that does not drain',
-    street_name: 'Bissonnet Street',
-    created_at: new Date(Date.now() - 345600000).toISOString(),
-    media_urls: []
-  }
-]
 
-function AddReportMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  const [position, setPosition] = useState<[number, number] | null>(null)
-
-  useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng
-      // TODO: Add Houston boundary check here
-      setPosition([lat, lng])
-      onLocationSelect(lat, lng)
-    },
-  })
-
-  return position === null ? null : (
-    <Marker 
-      position={position} 
-      icon={selectedPin}
-    >
-      <Popup>
-        <div className="text-center">
-          <div className="flex items-center gap-2 text-blue-600">
-            <MapPin className="h-4 w-4" />
-            <span className="font-medium">Selected Location</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Fill out the form to report an issue here
-          </p>
-        </div>
-      </Popup>
-    </Marker>
-  )
-}
 
 // Report Detail Modal Component
 interface Report {
-  id: string;
+  id: number;
   lat: number;
   lng: number;
   description: string;
-  street_name?: string;
+  street_name: string;
   created_at: string;
   media_urls: string[];
+  author_id: string;
 }
 
 function ReportDetailModal({ 
   report, 
   isOpen, 
-  onClose 
+  onClose,
+  onDelete,
+  currentUserId
 }: { 
   report: Report | null; 
   isOpen: boolean; 
-  onClose: () => void 
+  onClose: () => void;
+  onDelete?: (reportId: number) => void;
+  currentUserId?: string;
 }) {
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
   if (!report) return null
+
+  // Check if current user can delete this report
+  const canDelete = currentUserId && report.author_id === currentUserId
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) return
+    
+    setIsDeleting(true)
+    try {
+      await onDelete(report.id)
+      setShowDeleteConfirm(false)
+      onClose() // Close the modal after successful deletion
+    } catch (error) {
+      console.error('Failed to delete report:', error)
+      // Error handling will be done in the parent component
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -200,15 +152,13 @@ function ReportDetailModal({
             <p className="text-sm mt-1">{report.description}</p>
           </div>
           
-          {report.street_name && (
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground">Location</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <MapPin className="h-4 w-4 text-blue-500" />
-                <span className="text-sm">{report.street_name}</span>
-              </div>
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <MapPin className="h-4 w-4 text-blue-500" />
+              <span className="text-sm">{report.street_name}</span>
             </div>
-          )}
+          </div>
           
           <div>
             <Label className="text-sm font-medium text-muted-foreground">Reported</Label>
@@ -244,13 +194,68 @@ function ReportDetailModal({
             </div>
           )}
           
-          <div className="flex justify-end pt-4 border-t">
+          <div className="flex justify-between pt-4 border-t">
+            {canDelete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Report
+                  </>
+                )}
+              </Button>
+            )}
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* Confirmation dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="bg-white border-2 shadow-xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Report?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this report? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
@@ -259,33 +264,116 @@ export default function MapPage() {
   const [showAddReport, setShowAddReport] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null)
   const [reportForm, setReportForm] = useState({
-    street_name: '',
+    address: '',
     description: '',
     media_files: [] as File[]
   })
   const [showReports, setShowReports] = useState(true)
   const [showHeatmap, setShowHeatmap] = useState(false)
-  const [roadReports, setRoadReports] = useState(DEMO_ROAD_REPORTS)
+  const [roadReports, setRoadReports] = useState<Report[]>([])
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [showReportModal, setShowReportModal] = useState(false)
 
-  const { isAuthenticated } = useAuth0()
+  const { isAuthenticated, user } = useAuth0()
   const { toast } = useToast()
 
-  const handleLocationSelect = (lat: number, lng: number) => {
-    setSelectedLocation([lat, lng])
-  }
 
   const handleReportClick = (report: Report) => {
     setSelectedReport(report)
     setShowReportModal(true)
   }
 
-  const handleSubmitReport = async () => {
-    if (!selectedLocation) {
+  const handleDeleteReport = async (reportId: number) => {
+    if (!user?.sub) {
       toast({
-        title: "Location required",
-        description: "Please click on the map to select a location",
+        title: "Error",
+        description: "You must be logged in to delete reports",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      await RoadReportsAPI.deleteReport(reportId, user.sub)
+      
+      // Remove from local state
+      setRoadReports(prev => prev.filter(report => report.id !== reportId))
+      
+      toast({
+        title: "Success",
+        description: "Report deleted successfully"
+      })
+    } catch (error) {
+      console.error('Error deleting report:', error)
+      toast({
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to delete report",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Geocoding function to convert address to coordinates
+  const geocodeAddress = async (address: string): Promise<{lat: number, lng: number} | null> => {
+    try {
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Houston, TX')}&limit=1`
+      )
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon)
+        }
+      }
+      return null
+    } catch (error) {
+      console.error('Geocoding error:', error)
+      return null
+    }
+  }
+
+  // Handle address geocoding
+  const handleAddressGeocode = async () => {
+    if (!reportForm.address.trim()) {
+      toast({
+        title: "Address required",
+        description: "Please enter an address to geocode",
+        variant: "destructive"
+      })
+      return
+    }
+
+    toast({
+      title: "Geocoding address...",
+      description: "Finding coordinates for the address",
+    })
+
+    const coords = await geocodeAddress(reportForm.address)
+    
+    if (coords) {
+      setSelectedLocation([coords.lat, coords.lng])
+      toast({
+        title: "Location found!",
+        description: `Coordinates: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+      })
+    } else {
+      toast({
+        title: "Address not found",
+        description: "Could not find coordinates for this address. Please try a different address.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleSubmitReport = async () => {
+    // Validation
+    if (!reportForm.address.trim()) {
+      toast({
+        title: "Address required",
+        description: "Please enter an address",
         variant: "destructive"
       })
       return
@@ -293,33 +381,140 @@ export default function MapPage() {
 
     if (!reportForm.description.trim()) {
       toast({
-        title: "Description required",
+        title: "Description required", 
         description: "Please provide a description of the issue",
         variant: "destructive"
       })
       return
     }
 
-    // Demo implementation - just show success
-    toast({
-      title: "Report submitted",
-      description: "Your road report has been submitted successfully",
-    })
+    if (!selectedLocation) {
+      toast({
+        title: "Location required",
+        description: "Please geocode an address to find the location",
+        variant: "destructive"
+      })
+      return
+    }
 
-    // Reset form
-    setReportForm({
-      street_name: '',
-      description: '',
-      media_files: []
-    })
-    setSelectedLocation(null)
-    setShowAddReport(false)
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to submit reports",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      // Create report in Supabase with Auth0 user data
+      const newReport = await RoadReportsAPI.createReport({
+        address: reportForm.address.trim(),
+        description: reportForm.description.trim(),
+        media_files: reportForm.media_files,
+        coordinates: {
+          lat: selectedLocation[0],
+          lng: selectedLocation[1]
+        }
+      }, {
+        sub: user.sub!,
+        given_name: user.given_name,
+        family_name: user.family_name,
+        email: user.email,
+        name: user.name
+      })
+
+      // Convert Supabase report to our local format
+      const localReport: Report = {
+        id: newReport.id,
+        lat: selectedLocation[0],
+        lng: selectedLocation[1],
+        description: newReport.description,
+        street_name: newReport.street_name || reportForm.address.trim(),
+        created_at: newReport.created_at,
+        media_urls: newReport.media_urls || [],
+        author_id: user.sub || ''
+      }
+  
+
+      // Add to local state for immediate UI update
+      setRoadReports(prevReports => [...prevReports, localReport])
+
+      // Get user's display name for success message
+      const userName = RoadReportsAPI.getUserDisplayName({
+        given_name: user.given_name,
+        family_name: user.family_name,
+        name: user.name
+      })
+
+      // Success message
+      toast({
+        title: "Report submitted successfully!",
+        description: `Thank you ${userName}! Report #${newReport.id} has been added to the map`,
+      })
+
+      // Reset form
+      setReportForm({
+        address: '',
+        description: '',
+        media_files: []
+      })
+      setSelectedLocation(null)
+      setShowAddReport(false)
+
+    } catch (error) {
+      console.error('Error submitting report:', error)
+      toast({
+        title: "Error submitting report",
+        description: error instanceof Error ? error.message : "There was an error submitting your report. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     setReportForm({ ...reportForm, media_files: files })
   }
+
+  // Load reports from Supabase
+  const loadReportsFromSupabase = async () => {
+    try {
+      // Test connection first
+      const isConnected = await RoadReportsAPI.testConnection()
+      if (!isConnected) {
+        throw new Error('Cannot connect to database')
+      }
+
+      const reports = await RoadReportsAPI.getAllReports()
+      const localReports: Report[] = reports.map(report => ({
+        id: report.id, // Now a number (int4)
+        lat: report.lat,
+        lng: report.lng,
+        description: report.description,
+        street_name: report.street_name || '',
+        created_at: report.created_at,
+        media_urls: report.media_urls || [],
+        author_id: report.author_id
+      }))
+      
+      setRoadReports(localReports)
+      console.log(`Loaded ${localReports.length} reports from database`)
+    } catch (error) {
+      console.error('Error loading reports:', error)
+      toast({
+        title: "Error loading reports",
+        description: `Database error: ${error instanceof Error ? error.message : 'Unknown error'}. Using demo data.`,
+        variant: "destructive"
+      })
+      // Keep using demo data as fallback
+    }
+  }
+
+  // Load reports on component mount
+  useEffect(() => {
+    loadReportsFromSupabase()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="h-screen flex flex-col">
@@ -367,21 +562,34 @@ export default function MapPage() {
                   </DialogHeader>
                   
                   <div className="space-y-4">
+                    {/* Address field - MANDATORY */}
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address *</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="address"
+                          placeholder="123 Main St, Houston, TX"
+                          value={reportForm.address}
+                          onChange={(e) => setReportForm({ ...reportForm, address: e.target.value })}
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={handleAddressGeocode}
+                          disabled={!reportForm.address.trim()}
+                        >
+                          Find Location
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Location status */}
                     <div className="text-sm text-muted-foreground">
                       {selectedLocation 
-                        ? "Location selected on map" 
-                        : "Click on the map to select a location"
+                        ? `Location found: ${selectedLocation[0].toFixed(4)}, ${selectedLocation[1].toFixed(4)}` 
+                        : "Enter address and click 'Find Location'"
                       }
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="street_name">Street Name (Optional)</Label>
-                      <Input
-                        id="street_name"
-                        placeholder="Main Street, 5th Avenue, etc."
-                        value={reportForm.street_name}
-                        onChange={(e) => setReportForm({ ...reportForm, street_name: e.target.value })}
-                      />
                     </div>
                     
                     <div className="space-y-2">
@@ -414,7 +622,7 @@ export default function MapPage() {
                     <div className="flex gap-2">
                       <Button 
                         onClick={handleSubmitReport}
-                        disabled={!selectedLocation || !reportForm.description.trim()}
+                        disabled={!reportForm.address.trim() || !reportForm.description.trim() || !selectedLocation}
                         className="flex-1"
                       >
                         Submit Report
@@ -447,10 +655,6 @@ export default function MapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           
-          {/* Add report mode */}
-          {showAddReport && (
-            <AddReportMarker onLocationSelect={handleLocationSelect} />
-          )}
           
           {/* Existing reports */}
           {showReports && roadReports.map((report) => (
@@ -463,21 +667,19 @@ export default function MapPage() {
               }}
             >
               {!showReportModal && (
-                <Popup>
-                  <div className="space-y-3 min-w-[200px]">
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <div>
-                        <p className="font-medium text-sm">{report.description}</p>
-                        {report.street_name && (
-                          <div className="flex items-center gap-1 text-sm text-blue-600 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {report.street_name}
-                          </div>
-                        )}
+              <Popup>
+                <div className="space-y-3 min-w-[200px]">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="font-medium text-sm">{report.description}</p>
+                        <div className="flex items-center gap-1 text-sm text-blue-600 mt-1">
+                          <MapPin className="h-3 w-3" />
+                          {report.street_name}
+                        </div>
                       </div>
-                    </div>
-                    
+                  </div>
+                  
                     <div className="flex items-center gap-1 text-xs text-muted-foreground border-t pt-2">
                       <Calendar className="h-3 w-3" />
                       {new Date(report.created_at).toLocaleDateString()}
@@ -487,10 +689,10 @@ export default function MapPage() {
                       <div className="flex items-center gap-1" onClick={() => handleReportClick(report)}>
                         <Info className="h-3 w-3" />
                         Click for more details
-                      </div>
-                    </div>
                   </div>
-                </Popup>
+                    </div>
+                </div>
+              </Popup>
               )}
             </Marker>
           ))}
@@ -536,17 +738,17 @@ export default function MapPage() {
 
       {/* Status bar */}
       {!showReportModal && (
-        <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground">
-          <div className="flex justify-between items-center">
-            <span>
-              {roadReports.length} reports loaded
-              {showHeatmap && ` • ${DEMO_HEATMAP_DATA.length} heatmap points`}
-            </span>
-            <span>
-              Click "Add Report" then click map to place pin • Reports must be inside Houston city limits
-            </span>
-          </div>
+      <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground">
+        <div className="flex justify-between items-center">
+          <span>
+            {roadReports.length} reports loaded
+            {showHeatmap && ` • ${DEMO_HEATMAP_DATA.length} heatmap points`}
+          </span>
+          <span>
+              Click "Add Report" and enter an address to place a pin • Reports must be inside Houston city limits
+          </span>
         </div>
+      </div>
       )}
 
       {/* Report Detail Modal */}
@@ -557,6 +759,8 @@ export default function MapPage() {
           setShowReportModal(false)
           setSelectedReport(null)
         }}
+        onDelete={handleDeleteReport}
+        currentUserId={user?.sub}
       />
     </div>
   )
