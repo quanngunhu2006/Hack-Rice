@@ -32,9 +32,6 @@ export default function ProposalCard({ proposal }: ProposalCardProps) {
               <Badge className={`${categoryColors[proposal.category] ?? 'bg-gray-500'} text-white`}>
                 {proposal.category}
               </Badge>
-              <Badge variant={proposal.status === 'published' ? 'default' : 'secondary'}>
-                {proposal.status || 'pending'}
-              </Badge>
               <ScopeBadge
                 verified={proposal.scope_verified}
                 compact

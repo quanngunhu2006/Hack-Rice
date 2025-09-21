@@ -26,7 +26,7 @@ import {
   Calendar,
   User,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 interface ModerationAction {
   id: string;
@@ -41,7 +41,6 @@ export default function Admin() {
     useState<ModerationAction | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Load draft (pending) proposals
   const { data: pendingProposals, isLoading: pendingProposalsLoading } =
@@ -51,7 +50,7 @@ export default function Admin() {
         const { data, error } = await supabase
           .from("proposals")
           .select("*, profiles:profiles(full_name, nickname)")
-          .or("status.is.null,status.eq.draft")
+          .eq("status", "draft")
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
