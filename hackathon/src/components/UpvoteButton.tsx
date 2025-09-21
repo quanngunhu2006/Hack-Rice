@@ -90,7 +90,7 @@ export default function UpvoteButton({
       }
     }
 
-    // Check if upvotes reach 1 (for testing)
+    // Check if upvotes reach 10
     console.log(
       "Debug - Original upvotes:",
       upvotes,
@@ -102,7 +102,7 @@ export default function UpvoteButton({
       isCurrentlyUpvoted
     );
 
-    if (newUpvoteCount >= 1) {
+    if (newUpvoteCount >= 10) {
       console.log("🎉 GOAL REACHED! Opening popup...");
       // Open the interest form popup
       setShowInterestForm(true);
@@ -110,7 +110,7 @@ export default function UpvoteButton({
     } else {
       console.log(
         "❌ Goal not reached yet. Need",
-        1 - newUpvoteCount,
+        10 - newUpvoteCount,
         "more upvotes"
       );
     }
