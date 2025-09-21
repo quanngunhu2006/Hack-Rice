@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/lib/supabase";
+import { moderateProposal, moderateReport } from "@/lib/api";
 import {
   CheckCircle,
   XCircle,
@@ -72,11 +73,11 @@ export default function Admin() {
     }
 
     try {
-      await fetch(`/api/admin/${type}s/${item.id}/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "" }),
-      });
+      if (type === "proposal") {
+        await moderateProposal(item.id, action, "");
+      } else {
+        await moderateReport(item.id, action, "");
+      }
 
       toast({
         title: `${type} ${action}d`,
