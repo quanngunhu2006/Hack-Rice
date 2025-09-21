@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/lib/supabase";
+import { moderateProposal, moderateReport } from "@/lib/api";
 import {
   CheckCircle,
   XCircle,
@@ -72,11 +73,28 @@ export default function Admin() {
     }
 
     try {
-      await fetch(`/api/admin/${type}s/${item.id}/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "" }),
-      });
+      if (type === "proposal") {
+        const { error } = await supabase
+          .from("proposals")
+          .update({ status: "published", scope_verified: true })
+          .eq("id", item.id);
+        if (error) throw error;
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ["admin-pending-proposals"],
+          }),
+          queryClient.invalidateQueries({ queryKey: ["proposals"] }),
+          queryClient.invalidateQueries({
+            queryKey: ["proposal", String(item.id)],
+          }),
+          queryClient.invalidateQueries({ queryKey: ["my-proposals"] }),
+        ]);
+      } else {
+        toast({
+          title: "Not implemented",
+          description: "Report moderation isn't wired yet.",
+        });
+      }
 
       toast({
         title: `${type} ${action}d`,
@@ -95,14 +113,21 @@ export default function Admin() {
     if (!moderationAction || !rejectionReason.trim()) return;
 
     try {
-      await fetch(
-        `/api/admin/${moderationAction.type}s/${moderationAction.id}/reject`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: rejectionReason }),
-        }
-      );
+      if (moderationAction.type === "proposal") {
+        const { error } = await supabase
+          .from("proposals")
+          .update({ status: "rejected" })
+          .eq("id", moderationAction.id);
+        if (error) throw error;
+        await queryClient.invalidateQueries({
+          queryKey: ["admin-pending-proposals"],
+        });
+      } else {
+        toast({
+          title: "Not implemented",
+          description: "Report moderation isn't wired yet.",
+        });
+      }
 
       toast({
         title: `${moderationAction.type} rejected`,

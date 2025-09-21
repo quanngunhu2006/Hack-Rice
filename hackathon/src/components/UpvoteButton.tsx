@@ -35,10 +35,10 @@ export default function UpvoteButton({
   const upvoteMutation = useUpvote();
   const { data: userVotes } = useUserVotes();
 
-  const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
-  const isUserVoteUp = userVote && userVote.vote_type === 'up'
-  const isVerified = profile?.verified_resident
-  const netScore = optimisticUpvotes - optimisticDownvotes
+  const userVote = userVotes?.find((vote) => vote.proposal_id === proposalId);
+  const isUserVoteUp = userVote && userVote.vote_type === "up";
+  const isVerified = profile?.verified_resident;
+  const netScore = optimisticUpvotes - optimisticDownvotes;
 
   const handleUpvote = async () => {
     // Authentication temporarily disabled for demo - backend handles demo users
@@ -88,7 +88,7 @@ export default function UpvoteButton({
       }
     }
 
-    // Check if upvotes reach 1 (for testing)
+    // Check if upvotes reach 10
     console.log(
       "Debug - Original upvotes:",
       upvotes,
@@ -180,25 +180,36 @@ export default function UpvoteButton({
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size={compact ? "sm" : "default"}
-          onClick={handleUpvote}
-          disabled={upvoteMutation.isPending}
-          className={`flex items-center gap-2 ${
-            isUserVoteUp
-              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
-              : ''
-          }`}
-        >
-          {buttonContent}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {isUserVoteUp ? "You've upvoted this proposal" : "Upvote this proposal"}
-      </TooltipContent>
-    </Tooltip>
-  )
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={
+              userVote && userVote.vote_type === "up" ? "default" : "outline"
+            }
+            size={compact ? "sm" : "default"}
+            onClick={handleUpvote}
+            disabled={upvoteMutation.isPending}
+            className="flex items-center gap-2">
+            {buttonContent}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {userVote && userVote.vote_type === "up"
+            ? "You've upvoted this proposal"
+            : "Upvote this proposal"}
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Interest Form Popup */}
+      {console.log("Rendering popup with isOpen:", showInterestForm)}
+
+      <InterestFormPopup
+        isOpen={showInterestForm}
+        onClose={() => setShowInterestForm(false)}
+        proposalId={proposalId}
+        upvoteCount={optimisticUpvotes}
+      />
+    </>
+  );
 }
