@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
+import { supabase } from "@/lib/supabase";
 import {
   CheckCircle,
   XCircle,
@@ -38,10 +40,9 @@ export default function Admin() {
     useState<ModerationAction | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Load draft (pending) proposals
-  const { data: pendingProposals, isLoading: proposalsLoading } = useQuery({
+  const { data: pendingProposals, isLoading: pendingProposalsLoading } = useQuery({
     queryKey: ["admin-pending-proposals"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -56,62 +57,9 @@ export default function Admin() {
 
   // For now we don't have moderation for reports wired up
   const pendingReports: any[] = [];
-  const proposalsLoading = false;
   const reportsLoading = false;
 
-  const approveMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from("proposals")
-        .update({ status: "published", scope_verified: true })
-        .eq("id", proposalId)
-        .select();
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-pending-proposals"] });
-      queryClient.invalidateQueries({ queryKey: ["proposals"] });
-      queryClient.invalidateQueries({ queryKey: ["proposal"] });
-      toast({
-        title: "Proposal approved",
-        description: "The proposal is now published.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to approve proposal",
-        variant: "destructive",
-      });
-    },
-  });
 
-  const rejectMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const { error } = await supabase
-        .from("proposals")
-        .update({ status: "rejected" })
-        .eq("id", proposalId)
-        .select();
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-pending-proposals"] });
-      queryClient.invalidateQueries({ queryKey: ["proposals"] });
-      queryClient.invalidateQueries({ queryKey: ["proposal"] });
-      toast({
-        title: "Proposal rejected",
-        description: "The proposal has been rejected.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to reject proposal",
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleModerationAction = async (
     item: any,
@@ -344,7 +292,7 @@ export default function Admin() {
         </TabsList>
 
         <TabsContent value="proposals" className="space-y-4">
-          {proposalsLoading ? (
+          {pendingProposalsLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i}>
