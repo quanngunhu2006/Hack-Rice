@@ -70,11 +70,11 @@ export default function Navigation() {
     if (location.pathname.startsWith('/proposals/')) return 'Proposal'
     if (location.pathname.startsWith('/login')) return 'Login'
     const match = navItems.find((it) => isActivePath(it.path))
-    return match?.label ?? 'CitizenVoice'
+    return match?.label ?? 'CityVoice'
   }, [location.pathname, navItems])
 
   useEffect(() => {
-    document.title = `${currentTitle} • CitizenVoice`
+    document.title = `${currentTitle} • CityVoice`
   }, [currentTitle])
 
   // Measure item positions for desktop bubble animation
