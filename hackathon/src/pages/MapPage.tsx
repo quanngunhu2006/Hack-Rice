@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -9,18 +9,16 @@ import { useToast } from '@/hooks/useToast'
 import { useAuth0 } from '@auth0/auth0-react'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import { Icon } from 'leaflet'
-import { Plus, MapPin, Calendar, Layers } from 'lucide-react'
+import { Plus, MapPin, Calendar, Layers, Info } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
-// Create modern custom pin icons with smooth transition support
-const createCustomPin = (color: string, size: number = 32, isDragging: boolean = false) => {
-  const shadowSize = isDragging ? size * 1.2 : size
-  const shadowOpacity = isDragging ? 0.3 : 0.1
+// Create modern custom pin icons
+const createCustomPin = (color: string, size: number = 32) => {
   const svgIcon = `
-    <svg width="${shadowSize}" height="${shadowSize + 8}" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${size}" height="${size + 8}" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="${isDragging ? 4 : 2}" stdDeviation="${isDragging ? 3 : 1}" stop-opacity="${shadowOpacity}"/>
+          <feDropShadow dx="0" dy="2" stdDeviation="1" stop-opacity="0.1"/>
         </filter>
       </defs>
       <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22S19 14.25 19 9C19 5.13 15.87 2 12 2Z" 
@@ -31,17 +29,15 @@ const createCustomPin = (color: string, size: number = 32, isDragging: boolean =
   `
   return new Icon({
     iconUrl: `data:image/svg+xml;base64,${btoa(svgIcon)}`,
-    iconSize: [shadowSize, shadowSize + 8],
-    iconAnchor: [shadowSize/2, shadowSize],
-    popupAnchor: [0, -shadowSize + 4]
+    iconSize: [size, size + 8],
+    iconAnchor: [size/2, size],
+    popupAnchor: [0, -size + 4]
   })
 }
 
 // Different pin colors for different types
 const reportPin = createCustomPin('#ef4444', 32) // Red for reports
-const reportPinDragging = createCustomPin('#ef4444', 32, true) // Red for reports (dragging)
 const selectedPin = createCustomPin('#3b82f6', 36) // Blue for selected location
-const selectedPinDragging = createCustomPin('#3b82f6', 36, true) // Blue for selected location (dragging)
 
 // Create a delicate, orangey heatmap visualization
 const createHeatmapIcon = (intensity: number) => {
@@ -136,7 +132,6 @@ const DEMO_ROAD_REPORTS = [
 
 function AddReportMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
   const [position, setPosition] = useState<[number, number] | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
 
   useMapEvents({
     click(e) {
@@ -147,27 +142,10 @@ function AddReportMarker({ onLocationSelect }: { onLocationSelect: (lat: number,
     },
   })
 
-  const handleDragStart = () => {
-    setIsDragging(true)
-  }
-
-  const handleDragEnd = (e: any) => {
-    setIsDragging(false)
-    const marker = e.target;
-    const newPosition = marker.getLatLng();
-    setPosition([newPosition.lat, newPosition.lng])
-    onLocationSelect(newPosition.lat, newPosition.lng)
-  }
-
   return position === null ? null : (
     <Marker 
       position={position} 
-      icon={isDragging ? selectedPinDragging : selectedPin}
-      draggable={true}
-      eventHandlers={{
-        dragstart: handleDragStart,
-        dragend: handleDragEnd
-      }}
+      icon={selectedPin}
     >
       <Popup>
         <div className="text-center">
@@ -178,12 +156,102 @@ function AddReportMarker({ onLocationSelect }: { onLocationSelect: (lat: number,
           <p className="text-xs text-muted-foreground mt-1">
             Fill out the form to report an issue here
           </p>
-          <p className="text-xs text-muted-foreground mt-1 border-t pt-1">
-            💡 Drag this pin to adjust the location
-          </p>
         </div>
       </Popup>
     </Marker>
+  )
+}
+
+// Report Detail Modal Component
+interface Report {
+  id: string;
+  lat: number;
+  lng: number;
+  description: string;
+  street_name?: string;
+  created_at: string;
+  media_urls: string[];
+}
+
+function ReportDetailModal({ 
+  report, 
+  isOpen, 
+  onClose 
+}: { 
+  report: Report | null; 
+  isOpen: boolean; 
+  onClose: () => void 
+}) {
+  if (!report) return null
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-white border-2 shadow-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-red-500" />
+            Road Report Details
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+            <p className="text-sm mt-1">{report.description}</p>
+          </div>
+          
+          {report.street_name && (
+            <div>
+              <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <MapPin className="h-4 w-4 text-blue-500" />
+                <span className="text-sm">{report.street_name}</span>
+              </div>
+            </div>
+          )}
+          
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">Reported</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <span className="text-sm">{new Date(report.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+          
+          {report.media_urls && report.media_urls.length > 0 && (
+            <div>
+              <Label className="text-sm font-medium text-muted-foreground">Media</Label>
+              <div className="mt-2 space-y-2">
+                <Badge variant="secondary" className="text-xs">
+                  {report.media_urls.length} photo(s) attached
+                </Badge>
+                <div className="grid grid-cols-2 gap-2">
+                  {report.media_urls.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img 
+                        src={url} 
+                        alt={`Report image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -197,8 +265,9 @@ export default function MapPage() {
   })
   const [showReports, setShowReports] = useState(true)
   const [showHeatmap, setShowHeatmap] = useState(false)
-  const [draggedMarker, setDraggedMarker] = useState<string | null>(null)
   const [roadReports, setRoadReports] = useState(DEMO_ROAD_REPORTS)
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const { isAuthenticated } = useAuth0()
   const { toast } = useToast()
@@ -207,26 +276,9 @@ export default function MapPage() {
     setSelectedLocation([lat, lng])
   }
 
-  const handleMarkerDragStart = (markerId: string) => {
-    setDraggedMarker(markerId)
-  }
-
-  const handleMarkerDragEnd = (markerId: string, newLat: number, newLng: number) => {
-    setDraggedMarker(null)
-    
-    // Update the position of the dragged marker
-    setRoadReports(prevReports => 
-      prevReports.map(report => 
-        report.id === markerId 
-          ? { ...report, lat: newLat, lng: newLng }
-          : report
-      )
-    )
-
-    toast({
-      title: "Marker updated",
-      description: "Report location has been updated",
-    })
+  const handleReportClick = (report: Report) => {
+    setSelectedReport(report)
+    setShowReportModal(true)
   }
 
   const handleSubmitReport = async () => {
@@ -309,7 +361,7 @@ export default function MapPage() {
                     Add Report
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md bg-white border-2 shadow-xl">
                   <DialogHeader>
                     <DialogTitle>Report Road Issue</DialogTitle>
                   </DialogHeader>
@@ -405,50 +457,41 @@ export default function MapPage() {
             <Marker 
               key={report.id} 
               position={[report.lat, report.lng]} 
-              icon={draggedMarker === report.id ? reportPinDragging : reportPin}
-              draggable={isAuthenticated}
+              icon={reportPin}
               eventHandlers={{
-                dragstart: () => handleMarkerDragStart(report.id),
-                dragend: (e) => {
-                  const marker = e.target;
-                  const position = marker.getLatLng();
-                  handleMarkerDragEnd(report.id, position.lat, position.lng);
-                }
+                click: () => handleReportClick(report)
               }}
             >
-              <Popup>
-                <div className="space-y-3 min-w-[200px]">
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <div>
-                      <p className="font-medium text-sm">{report.description}</p>
-                      {report.street_name && (
-                        <div className="flex items-center gap-1 text-sm text-blue-600 mt-1">
-                          <MapPin className="h-3 w-3" />
-                          {report.street_name}
-                        </div>
-                      )}
+              {!showReportModal && (
+                <Popup>
+                  <div className="space-y-3 min-w-[200px]">
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <p className="font-medium text-sm">{report.description}</p>
+                        {report.street_name && (
+                          <div className="flex items-center gap-1 text-sm text-blue-600 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {report.street_name}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
-                    <div className="flex items-center gap-1">
+                    
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground border-t pt-2">
                       <Calendar className="h-3 w-3" />
                       {new Date(report.created_at).toLocaleDateString()}
                     </div>
-                    {report.media_urls && report.media_urls.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {report.media_urls.length} photo(s)
-                      </Badge>
-                    )}
-                  </div>
-                  {isAuthenticated && (
-                    <div className="text-xs text-muted-foreground border-t pt-2">
-                      💡 Drag this pin to update its location
+                    
+                    <div className="text-xs text-blue-600 border-t pt-2 cursor-pointer hover:text-blue-800">
+                      <div className="flex items-center gap-1" onClick={() => handleReportClick(report)}>
+                        <Info className="h-3 w-3" />
+                        Click for more details
+                      </div>
                     </div>
-                  )}
-                </div>
-              </Popup>
+                  </div>
+                </Popup>
+              )}
             </Marker>
           ))}
 
@@ -492,17 +535,29 @@ export default function MapPage() {
       </div>
 
       {/* Status bar */}
-      <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground">
-        <div className="flex justify-between items-center">
-          <span>
-            {roadReports.length} reports loaded
-            {showHeatmap && ` • ${DEMO_HEATMAP_DATA.length} heatmap points`}
-          </span>
-          <span>
-            Click "Add Report" then click map to place pin • Reports must be inside Houston city limits
-          </span>
+      {!showReportModal && (
+        <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground">
+          <div className="flex justify-between items-center">
+            <span>
+              {roadReports.length} reports loaded
+              {showHeatmap && ` • ${DEMO_HEATMAP_DATA.length} heatmap points`}
+            </span>
+            <span>
+              Click "Add Report" then click map to place pin • Reports must be inside Houston city limits
+            </span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Report Detail Modal */}
+      <ReportDetailModal 
+        report={selectedReport}
+        isOpen={showReportModal}
+        onClose={() => {
+          setShowReportModal(false)
+          setSelectedReport(null)
+        }}
+      />
     </div>
   )
 }
