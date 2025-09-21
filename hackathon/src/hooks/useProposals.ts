@@ -136,3 +136,26 @@ export function useUserVotes() {
     enabled: !!user
   })
 }
+
+export function useMyProposals() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: ['my-proposals', user?.sub],
+    queryFn: async (): Promise<Proposal[]> => {
+      if (!user) return []
+
+      // Fetch all proposals authored by the current user, newest first
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('*')
+        .eq('author_id', user.sub)
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user,
+  })
+}

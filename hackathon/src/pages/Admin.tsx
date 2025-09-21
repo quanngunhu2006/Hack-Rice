@@ -32,7 +32,7 @@ export default function Admin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('proposals')
-        .select('*')
+        .select('*, profiles:profiles(full_name, nickname)')
         .eq('status', 'draft')
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -48,13 +48,15 @@ export default function Admin() {
     mutationFn: async (proposalId: string) => {
       const { error } = await supabase
         .from('proposals')
-        .update({ status: 'published' })
+        .update({ status: 'published', scope_verified: true })
         .eq('id', proposalId)
         .select()
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposal'] })
       toast({ title: 'Proposal approved', description: 'The proposal is now published.' })
     },
     onError: () => {
@@ -73,6 +75,8 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposal'] })
       toast({ title: 'Proposal rejected', description: 'The proposal has been rejected.' })
     },
     onError: () => {
@@ -221,7 +225,7 @@ export default function Admin() {
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            Verified Resident
+            {report?.profiles?.full_name || report?.profiles?.nickname || 'Anonymous'}
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
