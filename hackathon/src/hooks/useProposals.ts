@@ -97,16 +97,46 @@ export function useCreateProposal() {
 
 export function useUpvote() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (proposalId: string) => {
+      // Convert proposalId to number for BIGINT parameter
       const { data, error } = await supabase.rpc('cast_vote', {
-        proposal_id: proposalId
+        proposal_id: parseInt(proposalId),
+        vote_direction: 'up',
+        user_id: user?.sub // Pass Auth0 user ID
       })
 
       if (error) throw error
       if (!data.success) throw new Error(data.message)
-      
+
+      return data
+    },
+    onSuccess: (_, proposalId) => {
+      // Invalidate proposals and specific proposal
+      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
+    }
+  })
+}
+
+export function useDownvote() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (proposalId: string) => {
+      // Convert proposalId to number for BIGINT parameter
+      const { data, error } = await supabase.rpc('cast_vote', {
+        proposal_id: parseInt(proposalId),
+        vote_direction: 'down',
+        user_id: user?.sub // Pass Auth0 user ID
+      })
+
+      if (error) throw error
+      if (!data.success) throw new Error(data.message)
+
       return data
     },
     onSuccess: (_, proposalId) => {
@@ -127,11 +157,14 @@ export function useUserVotes() {
 
       const { data, error } = await supabase
         .from('votes')
-        .select('proposal_id')
+        .select('proposal_id, vote_type')
         .eq('author_id', user.sub)
 
       if (error) throw error
-      return data.map(vote => vote.proposal_id)
+      return data.map(vote => ({
+        proposal_id: vote.proposal_id,
+        vote_type: vote.vote_type
+      }))
     },
     enabled: !!user
   })

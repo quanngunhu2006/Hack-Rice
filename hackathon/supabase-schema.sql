@@ -47,7 +47,8 @@ CREATE TABLE public.proposals (
   category USER-DEFINED,
   scope_verified boolean,
   status USER-DEFINED,
-  upvotes integer,
+  upvotes integer DEFAULT 0,
+  downvotes integer DEFAULT 0,
   location_hint text DEFAULT ''::text,
   updated_at timestamp with time zone DEFAULT (now() AT TIME ZONE 'utc'::text),
   CONSTRAINT proposals2_pkey PRIMARY KEY (id),
@@ -60,11 +61,15 @@ CREATE TABLE public.proposals (
 
 
 
+-- Create vote type enum
+CREATE TYPE vote_type AS ENUM ('up', 'down');
+
 -- Create votes table (one vote per user per proposal)
 CREATE TABLE votes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   proposal_id UUID REFERENCES proposals(id) ON DELETE CASCADE NOT NULL,
   author_id TEXT REFERENCES profiles(author_id) ON DELETE CASCADE NOT NULL,
+  vote_type vote_type NOT NULL DEFAULT 'up',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(proposal_id, author_id)
 );
@@ -92,13 +97,15 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_proposals_updated_at BEFORE UPDATE ON proposals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- RPC function to cast vote (updated author_id references)
-CREATE OR REPLACE FUNCTION cast_vote(proposal_id UUID)
+-- RPC function to cast or toggle vote
+CREATE OR REPLACE FUNCTION cast_vote(proposal_id UUID, vote_direction vote_type DEFAULT 'up')
 RETURNS JSON AS $$
 DECLARE
   user_text TEXT;
-  existing_vote UUID;
+  existing_vote votes;
+  existing_vote_type vote_type;
   user_verified BOOLEAN;
+  new_vote_type vote_type;
 BEGIN
   -- Get current user
   user_text := auth.uid();
@@ -115,17 +122,49 @@ BEGIN
   END IF;
 
   -- Check if user has already voted
-  SELECT id INTO existing_vote FROM votes WHERE proposal_id = cast_vote.proposal_id AND author_id = user_text;
+  SELECT * INTO existing_vote FROM votes WHERE proposal_id = cast_vote.proposal_id AND author_id = user_text;
 
-  IF existing_vote IS NOT NULL THEN
-    RETURN json_build_object('success', false, 'message', 'Already voted on this proposal');
+  IF existing_vote.id IS NOT NULL THEN
+    existing_vote_type := existing_vote.vote_type;
+
+    -- If same vote type, remove the vote (toggle off)
+    IF existing_vote_type = vote_direction THEN
+      DELETE FROM votes WHERE id = existing_vote.id;
+
+      -- Decrement appropriate counter
+      IF vote_direction = 'up' THEN
+        UPDATE proposals SET upvotes = upvotes - 1 WHERE id = cast_vote.proposal_id;
+      ELSE
+        UPDATE proposals SET downvotes = downvotes - 1 WHERE id = cast_vote.proposal_id;
+      END IF;
+
+      RETURN json_build_object('success', true, 'message', 'Vote removed successfully', 'vote_type', NULL);
+    ELSE
+      -- Change vote from up to down or down to up
+      UPDATE votes SET vote_type = vote_direction WHERE id = existing_vote.id;
+
+      -- Update counters: remove old vote, add new vote
+      IF existing_vote_type = 'up' THEN
+        UPDATE proposals SET upvotes = upvotes - 1, downvotes = downvotes + 1 WHERE id = cast_vote.proposal_id;
+      ELSE
+        UPDATE proposals SET upvotes = upvotes + 1, downvotes = downvotes - 1 WHERE id = cast_vote.proposal_id;
+      END IF;
+
+      RETURN json_build_object('success', true, 'message', 'Vote changed successfully', 'vote_type', vote_direction);
+    END IF;
+  ELSE
+    -- Insert new vote
+    INSERT INTO votes (proposal_id, author_id, vote_type) VALUES (cast_vote.proposal_id, user_text, vote_direction);
+
+    -- Increment appropriate counter
+    IF vote_direction = 'up' THEN
+      UPDATE proposals SET upvotes = upvotes + 1 WHERE id = cast_vote.proposal_id;
+    ELSE
+      UPDATE proposals SET downvotes = downvotes + 1 WHERE id = cast_vote.proposal_id;
+    END IF;
+
+    RETURN json_build_object('success', true, 'message', 'Vote cast successfully', 'vote_type', vote_direction);
   END IF;
-
-  -- Insert vote and increment counter
-  INSERT INTO votes (proposal_id, author_id) VALUES (cast_vote.proposal_id, user_text);
-  UPDATE proposals SET upvotes = upvotes + 1 WHERE id = cast_vote.proposal_id;
-
-  RETURN json_build_object('success', true, 'message', 'Vote cast successfully');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
