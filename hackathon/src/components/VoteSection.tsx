@@ -9,15 +9,19 @@ import { Skeleton } from '@/components/ui/skeleton'
 import InterestFormPopup from './InterestFormPopup'
 
 interface VoteSectionProps {
-  proposalId: string
-  compact?: boolean
-  onUnverifiedClick?: () => void
+  proposalId: string;
+  upvotes: number;
+  downvotes: number;
+  compact?: boolean;
+  onUnverifiedClick?: () => void;
+  proposalTitle?: string;
 }
 
 export default function VoteSection({
   proposalId,
   compact = false,
-  onUnverifiedClick
+  onUnverifiedClick,
+  proposalTitle = "Proposal",
 }: VoteSectionProps) {
   const { user, profile } = useAuth()
   const { toast } = useToast()
@@ -26,34 +30,36 @@ export default function VoteSection({
   const [showInterestForm, setShowInterestForm] = useState(false)
   const [popupUpvoteCount, setPopupUpvoteCount] = useState<number>(0)
 
-  const upvoteMutation = useUpvote()
-  const downvoteMutation = useDownvote()
-  const { data: userVotes } = useUserVotes()
-  const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId)
+  const upvoteMutation = useUpvote();
+  const downvoteMutation = useDownvote();
+  const { data: userVotes } = useUserVotes();
+  const { data: proposal, isLoading: proposalLoading } =
+    useProposal(proposalId);
 
-  const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
-  const isVerified = profile?.verified_resident
+  const userVote = userVotes?.find((vote) => vote.proposal_id === proposalId);
+  const isVerified = profile?.verified_resident;
 
   // Extract proposal data
-  const { upvotes, downvotes } = proposal || { upvotes: 0, downvotes: 0 }
+  const { upvotes, downvotes } = proposal || { upvotes: 0, downvotes: 0 };
 
   // Determine current active vote type (optimistic first, then server state)
-  const currentVoteType: 'up' | 'down' | null = optimisticVote ?? (userVote ? userVote.vote_type as 'up' | 'down' : null)
-  const isUpActive = currentVoteType === 'up'
-  const isDownActive = currentVoteType === 'down'
+  const currentVoteType: "up" | "down" | null =
+    optimisticVote ?? (userVote ? (userVote.vote_type as "up" | "down") : null);
+  const isUpActive = currentVoteType === "up";
+  const isDownActive = currentVoteType === "down";
 
   // Flash animation effect
   useEffect(() => {
     if (flashColor) {
-      const timer = setTimeout(() => setFlashColor(''), 300)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setFlashColor(""), 300);
+      return () => clearTimeout(timer);
     }
-  }, [flashColor])
+  }, [flashColor]);
 
   // Sync optimistic state with server state when it changes
   useEffect(() => {
-    setOptimisticVote(userVote ? (userVote.vote_type as 'up' | 'down') : null)
-  }, [userVote?.vote_type])
+    setOptimisticVote(userVote ? (userVote.vote_type as "up" | "down") : null);
+  }, [userVote?.vote_type]);
 
   const handleUpvote = async () => {
     // Authentication temporarily disabled for demo - backend handles demo users
@@ -81,7 +87,7 @@ export default function VoteSection({
     // }
 
     // Flash animation
-    setFlashColor('green')
+    setFlashColor("green");
 
     // Optimistic toggle: compute next state based on current
     const previous = currentVoteType
@@ -103,17 +109,17 @@ export default function VoteSection({
     try {
       await upvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
-      setFlashColor('') // Clear flash on error
+      setFlashColor(""); // Clear flash on error
       // Revert optimistic state on error
-      setOptimisticVote(previous)
+      setOptimisticVote(previous);
 
       toast({
         title: "Vote failed",
         description: error.message || "Failed to cast vote",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleDownvote = async () => {
     // Authentication temporarily disabled for demo - backend handles demo users
@@ -141,50 +147,72 @@ export default function VoteSection({
     // }
 
     // Flash animation
-    setFlashColor('red')
+    setFlashColor("red");
 
     // Optimistic toggle: compute next state based on current
-    const previous = currentVoteType
-    const next: 'up' | 'down' | null = previous === 'down' ? null : 'down'
-    setOptimisticVote(next)
+    const previous = currentVoteType;
+    const next: "up" | "down" | null = previous === "down" ? null : "down";
+    setOptimisticVote(next);
 
     try {
-      await downvoteMutation.mutateAsync(proposalId)
+      await downvoteMutation.mutateAsync(proposalId);
     } catch (error: any) {
-      setFlashColor('') // Clear flash on error
+      setFlashColor(""); // Clear flash on error
       // Revert optimistic state on error
-      setOptimisticVote(previous)
+      setOptimisticVote(previous);
 
       toast({
         title: "Vote failed",
         description: error.message || "Failed to cast vote",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const renderVoteDisplay = () => {
     if (compact) {
       return (
         <div className="flex flex-col items-center gap-2">
-          <div className={`text-sm font-medium ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
+          <div
+            className={`text-sm font-medium ${
+              flashColor === "green"
+                ? "animate-pulse text-green-500"
+                : flashColor === "red"
+                ? "animate-pulse text-red-500"
+                : ""
+            }`}>
             {upvotes - downvotes}
           </div>
           <div className="flex items-center gap-2">
-            <ArrowUp className={`h-4 w-4 ${isUpActive ? 'text-green-500' : 'text-gray-400'}`} />
+            <ArrowUp
+              className={`h-4 w-4 ${
+                isUpActive ? "text-green-500" : "text-gray-400"
+              }`}
+            />
             <span className="text-xs text-muted-foreground">{upvotes}</span>
-            <ArrowDown className={`h-4 w-4 ${isDownActive ? 'text-red-500' : 'text-gray-400'}`} />
+            <ArrowDown
+              className={`h-4 w-4 ${
+                isDownActive ? "text-red-500" : "text-gray-400"
+              }`}
+            />
             <span className="text-xs text-muted-foreground">{downvotes}</span>
           </div>
         </div>
-      )
+      );
     }
 
     return (
       <div className="space-y-4">
         {/* Vote count in the middle */}
         <div className="text-center">
-          <div className={`text-3xl font-bold ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
+          <div
+            className={`text-3xl font-bold ${
+              flashColor === "green"
+                ? "animate-pulse text-green-500"
+                : flashColor === "red"
+                ? "animate-pulse text-red-500"
+                : ""
+            }`}>
             {upvotes - downvotes}
           </div>
           <div className="text-sm text-muted-foreground">
@@ -197,37 +225,41 @@ export default function VoteSection({
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleUpvote(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleUpvote();
+            }}
             disabled={upvoteMutation.isPending || downvoteMutation.isPending}
             className={`flex items-center gap-1 ${
               isUpActive
-                ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
-                : ''
+                ? "bg-green-600 text-white hover:bg-green-700 border-green-600"
+                : ""
             }`}
-            title="Upvote this proposal"
-          >
+            title="Upvote this proposal">
             <ArrowUp className="h-4 w-4" />
             Upvote
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleDownvote(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownvote();
+            }}
             disabled={upvoteMutation.isPending || downvoteMutation.isPending}
             className={`flex items-center gap-1 ${
               isDownActive
-                ? 'bg-red-600 text-white hover:bg-red-700 border-red-600'
-                : ''
+                ? "bg-red-600 text-white hover:bg-red-700 border-red-600"
+                : ""
             }`}
-            title="Downvote this proposal"
-          >
+            title="Downvote this proposal">
             <ArrowDown className="h-4 w-4" />
             Downvote
           </Button>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Handle loading state
   if (proposalLoading) {
@@ -242,12 +274,12 @@ export default function VoteSection({
           <Skeleton className="h-9 w-20" />
         </div>
       </div>
-    )
+    );
   }
 
   // Handle error state
   if (!proposal) {
-    return <div>Proposal not found</div>
+    return <div>Proposal not found</div>;
   }
 
   // Authentication temporarily disabled for demo

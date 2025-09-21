@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/lib/supabase";
+import { moderateProposal, moderateReport } from "@/lib/api";
 import {
   CheckCircle,
   XCircle,
@@ -25,7 +26,7 @@ import {
   Calendar,
   User,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 interface ModerationAction {
   id: string;
@@ -40,7 +41,6 @@ export default function Admin() {
     useState<ModerationAction | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Load draft (pending) proposals
   const { data: pendingProposals, isLoading: pendingProposalsLoading } =
@@ -50,7 +50,7 @@ export default function Admin() {
         const { data, error } = await supabase
           .from("proposals")
           .select("*, profiles:profiles(full_name, nickname)")
-          .or("status.is.null,status.eq.draft")
+          .eq("status", "draft")
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
@@ -80,13 +80,20 @@ export default function Admin() {
           .eq("id", item.id);
         if (error) throw error;
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["admin-pending-proposals"] }),
+          queryClient.invalidateQueries({
+            queryKey: ["admin-pending-proposals"],
+          }),
           queryClient.invalidateQueries({ queryKey: ["proposals"] }),
-          queryClient.invalidateQueries({ queryKey: ["proposal", String(item.id)] }),
+          queryClient.invalidateQueries({
+            queryKey: ["proposal", String(item.id)],
+          }),
           queryClient.invalidateQueries({ queryKey: ["my-proposals"] }),
         ]);
       } else {
-        toast({ title: "Not implemented", description: "Report moderation isn't wired yet." });
+        toast({
+          title: "Not implemented",
+          description: "Report moderation isn't wired yet.",
+        });
       }
 
       toast({
@@ -112,9 +119,14 @@ export default function Admin() {
           .update({ status: "rejected" })
           .eq("id", moderationAction.id);
         if (error) throw error;
-        await queryClient.invalidateQueries({ queryKey: ["admin-pending-proposals"] });
+        await queryClient.invalidateQueries({
+          queryKey: ["admin-pending-proposals"],
+        });
       } else {
-        toast({ title: "Not implemented", description: "Report moderation isn't wired yet." });
+        toast({
+          title: "Not implemented",
+          description: "Report moderation isn't wired yet.",
+        });
       }
 
       toast({

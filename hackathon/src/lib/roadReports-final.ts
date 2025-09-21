@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import type { RoadReport, RoadReportInsert, RoadReportWithCoords } from '@/types/database'
 
 export class RoadReportsAPI {
-  // Create a new road report
+  // Create a new road report (images stored locally, only report data in database)
   static async createReport(
     reportData: {
       address: string
@@ -22,35 +22,33 @@ export class RoadReportsAPI {
       throw new Error('User must be authenticated to create reports')
     }
 
-    // Upload media files if any
-    const mediaUrls: string[] = []
+    // Store images locally and create local URLs
+    const localImageUrls: string[] = []
     if (reportData.media_files.length > 0) {
+      console.log(`📸 Storing ${reportData.media_files.length} files locally`)
+      
       for (const file of reportData.media_files) {
-        const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`
-        const { error } = await supabase.storage
-          .from('road-reports')
-          .upload(fileName, file)
+        console.log(`📸 Processing: ${file.name} (${file.type}, ${file.size} bytes)`)
         
-        if (error) {
-          console.error('Error uploading file:', error)
-          continue
-        }
+        // Create a local URL for the file
+        const localUrl = URL.createObjectURL(file)
+        localImageUrls.push(localUrl)
         
-        const { data: { publicUrl } } = supabase.storage
-          .from('road-reports')
-          .getPublicUrl(fileName)
-        
-        mediaUrls.push(publicUrl)
+        console.log('✅ Local URL created:', localUrl)
       }
+      
+      console.log(`📸 Final local URLs:`, localImageUrls)
+    } else {
+      console.log('📸 No media files to store')
     }
 
-    // Create the report - matches your database structure
+    // Create the report - only store report data in database, no image URLs
     const reportInsert: RoadReportInsert = {
       author_id: user.sub, // Use author_id to match your database
       geom: `POINT(${reportData.coordinates.lng} ${reportData.coordinates.lat})`,
       street_name: reportData.address,
       description: reportData.description,
-      media_urls: mediaUrls.length > 0 ? mediaUrls : null
+      media_urls: null // Don't store image URLs in database
     }
 
     const { data, error } = await supabase
@@ -63,7 +61,11 @@ export class RoadReportsAPI {
       throw new Error(`Failed to create report: ${error.message}`)
     }
 
-    return data
+    // Return the database data with local image URLs
+    return {
+      ...data,
+      media_urls: localImageUrls.length > 0 ? localImageUrls : null
+    }
   }
 
   // Get all road reports - matches your database structure

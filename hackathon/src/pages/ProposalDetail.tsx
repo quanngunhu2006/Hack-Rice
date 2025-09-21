@@ -1,28 +1,34 @@
-import { useParams, Navigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useState } from 'react'
-import { useProposal } from '@/hooks/useProposals'
-import { useAuth } from '@/contexts/AuthContext'
-import VoteSection from '@/components/VoteSection'
-import ScopeBadge from '@/components/ScopeBadge'
-import MarkdownViewer from '@/components/MarkdownViewer'
-import VerificationWizard from '@/components/VerificationWizard'
-import { ArrowLeft, MapPin, User, Calendar, FileSignature } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useParams, Navigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useProposal } from "@/hooks/useProposals";
+import { useAuth } from "@/contexts/AuthContext";
+import VoteSection from "@/components/VoteSection";
+import ScopeBadge from "@/components/ScopeBadge";
+import MarkdownViewer from "@/components/MarkdownViewer";
+import VerificationWizard from "@/components/VerificationWizard";
+import { ArrowLeft, MapPin, User, Calendar, FileSignature } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function ProposalDetail() {
-  const { id } = useParams<{ id: string }>()
-  const { user, profile } = useAuth()
-  const [showVerificationDialog, setShowVerificationDialog] = useState(false)
-  
-  const { data: proposal, isLoading, error } = useProposal(id!)
+  const { id } = useParams<{ id: string }>();
+  const { user, profile } = useAuth();
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+
+  const { data: proposal, isLoading, error } = useProposal(id!);
 
   if (!id) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
   if (isLoading) {
@@ -45,7 +51,7 @@ export default function ProposalDetail() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   if (error || !proposal) {
@@ -66,46 +72,46 @@ export default function ProposalDetail() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   const handleUpvoteClick = () => {
     if (!user) {
       // Redirect to login
-      return
+      return;
     }
-    
+
     if (!profile?.verified_resident) {
-      setShowVerificationDialog(true)
-      return
+      setShowVerificationDialog(true);
+      return;
     }
-    
+
     // Handle upvote through UpvoteButton component
-  }
+  };
 
   const handleSignPetition = () => {
     if (!user) {
       // Redirect to login
-      return
+      return;
     }
-    
+
     if (!profile?.verified_resident) {
-      setShowVerificationDialog(true)
-      return
+      setShowVerificationDialog(true);
+      return;
     }
-    
+
     // TODO: Implement petition signing
-    console.log('Sign petition for proposal:', proposal.id)
-  }
+    console.log("Sign petition for proposal:", proposal.id);
+  };
 
   const categoryColors: Record<string, string> = {
-    Roads: 'bg-blue-500',
-    Sanitation: 'bg-green-500',
-    Parks: 'bg-emerald-500',
-    Safety: 'bg-red-500',
-    Zoning: 'bg-purple-500',
-    Other: 'bg-gray-500'
-  }
+    Roads: "bg-blue-500",
+    Sanitation: "bg-green-500",
+    Parks: "bg-emerald-500",
+    Safety: "bg-red-500",
+    Zoning: "bg-purple-500",
+    Other: "bg-gray-500",
+  };
 
   return (
     <div className="space-y-6">
@@ -124,18 +130,20 @@ export default function ProposalDetail() {
           <Card>
             <CardHeader>
               <div className="flex flex-wrap gap-2 mb-2">
-                <Badge 
-                  className={`${categoryColors[proposal.category]} text-white`}
-                >
+                <Badge
+                  className={`${categoryColors[proposal.category]} text-white`}>
                   {proposal.category}
                 </Badge>
-                <Badge variant={proposal.status === 'published' ? 'default' : 'secondary'}>
+                <Badge
+                  variant={
+                    proposal.status === "published" ? "default" : "secondary"
+                  }>
                   {proposal.status}
                 </Badge>
               </div>
-              
+
               <CardTitle className="text-2xl">{proposal.title}</CardTitle>
-              
+
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <User className="h-4 w-4" />
@@ -153,10 +161,10 @@ export default function ProposalDetail() {
                 )}
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <p className="text-lg mb-4">{proposal.summary}</p>
-              
+
               {proposal.body_md && (
                 <MarkdownViewer content={proposal.body_md} />
               )}
@@ -164,7 +172,7 @@ export default function ProposalDetail() {
           </Card>
 
           {/* Petition Section */}
-          {proposal.status === 'petitioning' && (
+          {proposal.status === "petitioning" && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -174,10 +182,12 @@ export default function ProposalDetail() {
               </CardHeader>
               <CardContent>
                 <p className="mb-4">
-                  This proposal has reached enough support to start a petition! 
+                  This proposal has reached enough support to start a petition!
                   Add your signature to help bring it to the city council.
                 </p>
-                <Button onClick={handleSignPetition} className="w-full sm:w-auto">
+                <Button
+                  onClick={handleSignPetition}
+                  className="w-full sm:w-auto">
                   Sign Petition
                 </Button>
               </CardContent>
@@ -196,6 +206,7 @@ export default function ProposalDetail() {
               <VoteSection
                 proposalId={proposal.id}
                 onUnverifiedClick={handleUpvoteClick}
+                proposalTitle={proposal.title}
               />
             </CardContent>
           </Card>
@@ -206,9 +217,13 @@ export default function ProposalDetail() {
               <CardTitle>Scope Review</CardTitle>
             </CardHeader>
             <CardContent>
-              <ScopeBadge 
+              <ScopeBadge
                 verified={proposal.scope_verified}
-                reason={proposal.scope_verified ? "This falls within city jurisdiction" : "Under review by moderators"}
+                reason={
+                  proposal.scope_verified
+                    ? "This falls within city jurisdiction"
+                    : "Under review by moderators"
+                }
               />
             </CardContent>
           </Card>
@@ -216,17 +231,20 @@ export default function ProposalDetail() {
       </div>
 
       {/* Verification Dialog */}
-      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+      <Dialog
+        open={showVerificationDialog}
+        onOpenChange={setShowVerificationDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Verification Required</DialogTitle>
             <DialogDescription>
-              You need to verify your residency to upvote proposals and sign petitions.
+              You need to verify your residency to upvote proposals and sign
+              petitions.
             </DialogDescription>
           </DialogHeader>
           <VerificationWizard />
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
