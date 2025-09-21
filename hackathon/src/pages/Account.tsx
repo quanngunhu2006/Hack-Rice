@@ -5,9 +5,14 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth0 } from '@auth0/auth0-react'
 import { User, History, FileText } from 'lucide-react'
+import { useMyProposals } from '@/hooks/useProposals'
+import ProposalCard from '@/components/ProposalCard'
+import { Skeleton } from '@/components/ui/skeleton'
+
 
 export default function Account() {
   const { user, logout } = useAuth0()
+  const { data: myProposals, isLoading: isLoadingMyProposals, error: myProposalsError } = useMyProposals()
 
   const handleSignOut = () => {
     logout({ logoutParams: { returnTo: window.location.origin } })
@@ -84,12 +89,59 @@ export default function Account() {
                 Your proposals, votes, and signatures
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Activity history coming soon!</p>
-                <p className="text-sm">We'll show your proposals, votes, and petition signatures here.</p>
-              </div>
+            <CardContent className="space-y-6">
+              {isLoadingMyProposals && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i}>
+                      <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex justify-between items-center">
+                          <Skeleton className="h-6 w-16" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {myProposalsError && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Failed to load your history. Please try again.</p>
+                </div>
+              )}
+
+              {!isLoadingMyProposals && !myProposalsError && (!myProposals || myProposals.length === 0) && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No proposals yet.</p>
+                  <p className="text-sm">Create a proposal to see it here.</p>
+                </div>
+              )}
+
+              {!isLoadingMyProposals && !myProposalsError && myProposals && myProposals.length > 0 && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Current proposal</h3>
+                    <ProposalCard proposal={myProposals[0]} />
+                  </div>
+
+                  {myProposals.slice(1).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Previous proposals</h3>
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {myProposals.slice(1).map((p) => (
+                          <ProposalCard key={p.id} proposal={p} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

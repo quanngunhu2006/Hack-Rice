@@ -4,37 +4,40 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useAuth } from '@/contexts/AuthContext'
 import { useUpvote, useUserVotes } from '@/hooks/useProposals'
 import { useToast } from '@/hooks/useToast'
-import { ArrowUp } from 'lucide-react'
 
 interface UpvoteButtonProps {
   proposalId: string
   upvotes: number
+  downvotes?: number
   compact?: boolean
   onUnverifiedClick?: () => void
 }
 
-export default function UpvoteButton({ 
-  proposalId, 
-  upvotes, 
+export default function UpvoteButton({
+  proposalId,
+  upvotes,
+  downvotes = 0,
   compact = false,
   onUnverifiedClick
 }: UpvoteButtonProps) {
   const { user, profile } = useAuth()
   const { toast } = useToast()
   const [optimisticUpvotes, setOptimisticUpvotes] = useState(upvotes)
-  const [hasVoted, setHasVoted] = useState(false)
-  
+  const [optimisticDownvotes, setOptimisticDownvotes] = useState(downvotes)
+  const [flashColor, setFlashColor] = useState<string>('')
+
   const upvoteMutation = useUpvote()
   const { data: userVotes } = useUserVotes()
-  
-  const userHasVoted = userVotes?.includes(proposalId) || hasVoted
+
+  const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
   const isVerified = profile?.verified_resident
+  const netScore = optimisticUpvotes - optimisticDownvotes
 
   const handleUpvote = async () => {
     if (!user) {
       toast({
         title: "Sign in required",
-        description: "Please sign in to upvote proposals",
+        description: "Please sign in to vote on proposals",
         variant: "destructive"
       })
       return
@@ -46,37 +49,40 @@ export default function UpvoteButton({
       } else {
         toast({
           title: "Verification required",
-          description: "Please verify your residency to upvote proposals",
+          description: "Please verify your residency to vote on proposals",
           variant: "destructive"
         })
       }
       return
     }
 
-    if (userHasVoted) {
-      toast({
-        title: "Already voted",
-        description: "You have already upvoted this proposal",
-        variant: "destructive"
-      })
-      return
-    }
+    // Flash animation
+    setFlashColor('green')
 
     // Optimistic update
-    setOptimisticUpvotes(prev => prev + 1)
-    setHasVoted(true)
+    const isCurrentlyUpvoted = userVote?.vote_type === 'up'
+    const isCurrentlyDownvoted = userVote?.vote_type === 'down'
+
+    if (isCurrentlyUpvoted) {
+      // Remove upvote
+      setOptimisticUpvotes(prev => prev - 1)
+    } else {
+      // Add upvote
+      setOptimisticUpvotes(prev => prev + 1)
+      // Remove downvote if it exists
+      if (isCurrentlyDownvoted) {
+        setOptimisticDownvotes(prev => prev - 1)
+      }
+    }
 
     try {
       await upvoteMutation.mutateAsync(proposalId)
-      toast({
-        title: "Vote cast!",
-        description: "Your upvote has been recorded",
-      })
     } catch (error: any) {
-      // Rollback optimistic update
+      // Rollback optimistic update on error
       setOptimisticUpvotes(upvotes)
-      setHasVoted(false)
-      
+      setOptimisticDownvotes(downvotes)
+      setFlashColor('') // Clear flash on error
+
       toast({
         title: "Vote failed",
         description: error.message || "Failed to cast vote",
@@ -86,17 +92,16 @@ export default function UpvoteButton({
   }
 
   const buttonContent = compact ? (
-    <div className="flex items-center gap-1">
-      <ArrowUp className={`h-4 w-4 ${userHasVoted ? 'text-primary' : ''}`} />
-      <span className="text-sm font-medium">{optimisticUpvotes}</span>
+    <div className="flex flex-col items-center gap-1">
+      <div className={`text-sm font-medium ${flashColor === 'green' ? 'animate-pulse text-green-500' : ''}`}>
+        {netScore}
+      </div>
     </div>
   ) : (
     <div className="flex flex-col items-center gap-1">
-      <ArrowUp className={`h-5 w-5 ${userHasVoted ? 'text-primary' : ''}`} />
-      <span className="text-lg font-bold">{optimisticUpvotes}</span>
-      <span className="text-xs text-muted-foreground">
-        {optimisticUpvotes === 1 ? 'upvote' : 'upvotes'}
-      </span>
+      <div className={`text-lg font-bold ${flashColor === 'green' ? 'animate-pulse text-green-500' : ''}`}>
+        {netScore}
+      </div>
     </div>
   )
 
@@ -115,7 +120,7 @@ export default function UpvoteButton({
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {!user ? "Sign in to upvote" : "Verify residency to upvote"}
+          {!user ? "Sign in to vote" : "Verify residency to vote"}
         </TooltipContent>
       </Tooltip>
     )
@@ -125,17 +130,17 @@ export default function UpvoteButton({
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant={userHasVoted ? "default" : "outline"}
+          variant={userVote && userVote.vote_type === 'up' ? "default" : "outline"}
           size={compact ? "sm" : "default"}
           onClick={handleUpvote}
-          disabled={userHasVoted || upvoteMutation.isPending}
+          disabled={upvoteMutation.isPending}
           className="flex items-center gap-2"
         >
           {buttonContent}
         </Button>
       </TooltipTrigger>
       <TooltipContent>
-        {userHasVoted ? "You've upvoted this proposal" : "Upvote this proposal"}
+        {userVote && userVote.vote_type === 'up' ? "You've upvoted this proposal" : "Upvote this proposal"}
       </TooltipContent>
     </Tooltip>
   )
