@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,7 @@ import {
   Calendar,
   User,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface ModerationAction {
   id: string;
@@ -42,24 +42,23 @@ export default function Admin() {
   const { toast } = useToast();
 
   // Load draft (pending) proposals
-  const { data: pendingProposals, isLoading: pendingProposalsLoading } = useQuery({
-    queryKey: ["admin-pending-proposals"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("proposals")
-        .select("*, profiles:profiles(full_name, nickname)")
-        .eq("status", "draft")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { data: pendingProposals, isLoading: pendingProposalsLoading } =
+    useQuery({
+      queryKey: ["admin-pending-proposals"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("proposals")
+          .select("*, profiles:profiles(full_name, nickname)")
+          .eq("status", "draft")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      },
+    });
 
   // For now we don't have moderation for reports wired up
   const pendingReports: any[] = [];
   const reportsLoading = false;
-
-
 
   const handleModerationAction = async (
     item: any,

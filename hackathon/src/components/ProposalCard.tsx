@@ -1,27 +1,25 @@
-import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import ScopeBadge from '@/components/ScopeBadge'
-import { Calendar, MapPin, User } from 'lucide-react'
-import type { Proposal } from '@/types/database'
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import UpvoteButton from "@/components/UpvoteButton";
+import ScopeBadge from "@/components/ScopeBadge";
+import { Calendar, MapPin, User } from "lucide-react";
+import type { Proposal } from "@/types/database";
 
 interface ProposalCardProps {
-  proposal: Proposal
+  proposal: Proposal;
 }
 
 export default function ProposalCard({ proposal }: ProposalCardProps) {
   const categoryColors = {
-    Roads: 'bg-blue-500',
-    Sanitation: 'bg-green-500',
-    Parks: 'bg-emerald-500',
-    Safety: 'bg-red-500',
-    Zoning: 'bg-purple-500',
-    Other: 'bg-gray-500'
-  }
-
-  const upvotes = Number(proposal.upvotes) || 0
-  const downvotes = Number(proposal.downvotes) || 0
-  const netScore = upvotes - downvotes
+    Roads: "bg-blue-500",
+    Sanitation: "bg-green-500",
+    Parks: "bg-emerald-500",
+    Safety: "bg-red-500",
+    Zoning: "bg-purple-500",
+    Other: "bg-gray-500",
+  };
 
   return (
     <Link to={`/proposals/${proposal.id}`} className="block">
