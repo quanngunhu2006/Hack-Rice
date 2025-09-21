@@ -75,13 +75,14 @@ export function useProposal(id: string) {
 
 export function useCreateProposal() {
   const queryClient = useQueryClient()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (proposal: Omit<ProposalInsert, 'author_id'>): Promise<Proposal> => {
       if (!user) throw new Error('Must be authenticated')
 
-      const status = profile?.verified_resident ? 'published' : 'draft'
+      // New proposals are now always created as drafts for admin review
+      const status = 'draft'
 
       const { data, error } = await supabase
         .from('proposals')

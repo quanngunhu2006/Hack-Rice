@@ -231,9 +231,7 @@ export default function Navigation() {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r bg-secondary/70 bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.04)_1px,transparent_1px)] [background-size:14px_14px] px-6 pt-8 pb-6">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/file.svg" alt="CityVoice" className="w-15 h-15" />
             <h1 className="text-xl font-bold">CityVoice</h1>
           </Link>
 
@@ -289,9 +287,7 @@ export default function Navigation() {
       <div className="lg:hidden">
         <div className={`flex items-center justify-between p-4 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 transition-[background-color,box-shadow] duration-200 ${isMobileMenuOpen ? 'shadow-sm' : ''}`}>
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/file.svg" alt="CityVoice" className="w-8 h-8" />
             <h1 className="text-xl font-bold">CityVoice</h1>
           </Link>
 

@@ -41,6 +41,12 @@ export default function ProposalCard({ proposal }: ProposalCardProps) {
                 verified={proposal.scope_verified}
                 compact
               />
+              {/* Publication status */}
+              {proposal.status && (
+                <Badge variant={proposal.status === 'published' ? 'default' : 'secondary'}>
+                  {proposal.status === 'published' ? 'Published' : proposal.status === 'petitioning' ? 'Verified' : proposal.status}
+                </Badge>
+              )}
             </div>
             <div className="text-sm font-medium">
               <span className={`${netScore > 0 ? 'text-emerald-600' : netScore < 0 ? 'text-orange-600' : 'text-slate-500'}`}>
