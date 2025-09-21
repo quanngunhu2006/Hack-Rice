@@ -35,37 +35,35 @@ export default function UpvoteButton({
   const upvoteMutation = useUpvote();
   const { data: userVotes } = useUserVotes();
 
-  const userVote = userVotes?.find((vote) => vote.proposal_id === proposalId);
-  const isVerified = profile?.verified_resident;
-  const netScore = optimisticUpvotes - optimisticDownvotes;
-
-  // Debug: Track popup state changes
-  useEffect(() => {
-    console.log("Popup state changed to:", showInterestForm);
-  }, [showInterestForm]);
+  const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
+  const isUserVoteUp = userVote && userVote.vote_type === 'up'
+  const isVerified = profile?.verified_resident
+  const netScore = optimisticUpvotes - optimisticDownvotes
 
   const handleUpvote = async () => {
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to vote on proposals",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Authentication temporarily disabled for demo - backend handles demo users
+    // if (!user) {
+    //   toast({
+    //     title: "Sign in required",
+    //     description: "Please sign in to vote on proposals",
+    //     variant: "destructive"
+    //   })
+    //   return
+    // }
 
-    if (!isVerified) {
-      if (onUnverifiedClick) {
-        onUnverifiedClick();
-      } else {
-        toast({
-          title: "Verification required",
-          description: "Please verify your residency to vote on proposals",
-          variant: "destructive",
-        });
-      }
-      return;
-    }
+    // Verification temporarily disabled - users can vote without verification
+    // if (!isVerified) {
+    //   if (onUnverifiedClick) {
+    //     onUnverifiedClick()
+    //   } else {
+    //     toast({
+    //       title: "Verification required",
+    //       description: "Please verify your residency to vote on proposals",
+    //       variant: "destructive"
+    //     })
+    //   }
+    //   return
+    // }
 
     // Flash animation
     setFlashColor("green");
@@ -182,36 +180,25 @@ export default function UpvoteButton({
   }
 
   return (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={
-              userVote && userVote.vote_type === "up" ? "default" : "outline"
-            }
-            size={compact ? "sm" : "default"}
-            onClick={handleUpvote}
-            disabled={upvoteMutation.isPending}
-            className="flex items-center gap-2">
-            {buttonContent}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {userVote && userVote.vote_type === "up"
-            ? "You've upvoted this proposal"
-            : "Upvote this proposal"}
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Interest Form Popup */}
-      {console.log("Rendering popup with isOpen:", showInterestForm)}
-
-      <InterestFormPopup
-        isOpen={showInterestForm}
-        onClose={() => setShowInterestForm(false)}
-        proposalId={proposalId}
-        upvoteCount={optimisticUpvotes}
-      />
-    </>
-  );
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size={compact ? "sm" : "default"}
+          onClick={handleUpvote}
+          disabled={upvoteMutation.isPending}
+          className={`flex items-center gap-2 ${
+            isUserVoteUp
+              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+              : ''
+          }`}
+        >
+          {buttonContent}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isUserVoteUp ? "You've upvoted this proposal" : "Upvote this proposal"}
+      </TooltipContent>
+    </Tooltip>
+  )
 }
