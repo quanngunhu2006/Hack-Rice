@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Plus, TrendingUp, Clock, MapPin } from 'lucide-react'
+import { Search, Plus, TrendingUp, Clock, MapPin, FileText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useProposals } from '@/hooks/useProposals'
 import ProposalCard from '@/components/ProposalCard'
@@ -18,6 +19,37 @@ export default function Explore() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const { isAuthenticated } = useAuth0()
+
+  // Animated bubble for tab filters
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [bubble, setBubble] = useState<{ x: number; width: number; height: number }>({ x: 0, width: 0, height: 0 })
+
+  const indexForTab = (value: string) => ['trending', 'newest', 'nearby'].indexOf(value)
+
+  const measure = () => {
+    const list = listRef.current
+    if (!list) return
+    const idx = indexForTab(activeTab)
+    const el = triggerRefs.current[idx]
+    if (!el) return
+    const listRect = list.getBoundingClientRect()
+    const rect = el.getBoundingClientRect()
+    const styles = window.getComputedStyle(list)
+    const paddingLeft = parseFloat(styles.paddingLeft || '0')
+    setBubble({ x: rect.left - listRect.left - paddingLeft, width: rect.width, height: rect.height })
+  }
+
+  useLayoutEffect(() => {
+    measure()
+    const onResize = () => measure()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => {
+    measure()
+  }, [activeTab])
 
   const getSortField = () => {
     switch (activeTab) {
@@ -85,7 +117,7 @@ export default function Explore() {
               Be the first to propose an improvement to your city!
             </p>
             {isAuthenticated && (
-              <Button asChild>
+              <Button asChild className="button-shine border-animate transition-[transform,box-shadow,background-color] duration-150">
                 <Link to="/propose">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Proposal
@@ -107,23 +139,18 @@ export default function Explore() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Explore Proposals</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2 mb-1">
+            <FileText className="h-7 w-7 text-primary" />
+            Explore Proposals
+          </h1>
           <p className="text-muted-foreground">
             Discover and support proposals for your city
           </p>
         </div>
-            {isAuthenticated && (
-              <Button asChild>
-                <Link to="/propose">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Proposal
-                </Link>
-              </Button>
-            )}
       </div>
 
       {/* Search */}
@@ -163,20 +190,56 @@ export default function Explore() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="trending" className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <TabsList ref={listRef} className="relative">
+          {/* Animated bubble */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute left-1 top-1 rounded-md bg-background shadow-sm"
+            animate={{ x: bubble.x, width: bubble.width, height: bubble.height }}
+            transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.95 }}
+            style={{ willChange: 'transform,width,height' }}
+          />
+          <TabsTrigger
+            value="trending"
+            className="relative z-10 flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            ref={(el) => {
+              triggerRefs.current[0] = el
+            }}
+          >
             <TrendingUp className="h-4 w-4" />
             Trending
           </TabsTrigger>
-          <TabsTrigger value="newest" className="flex items-center gap-2">
+          <TabsTrigger
+            value="newest"
+            className="relative z-10 flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            ref={(el) => {
+              triggerRefs.current[1] = el
+            }}
+          >
             <Clock className="h-4 w-4" />
             Newest
           </TabsTrigger>
-          <TabsTrigger value="nearby" className="flex items-center gap-2">
+          <TabsTrigger
+            value="nearby"
+            className="relative z-10 flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            ref={(el) => {
+              triggerRefs.current[2] = el
+            }}
+          >
             <MapPin className="h-4 w-4" />
             Near You
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+            {isAuthenticated && (
+          <Button asChild className="button-shine border-animate transition-[transform,box-shadow,background-color] duration-150">
+              <Link to="/propose">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Proposal
+              </Link>
+            </Button>
+          )}
+        </div>
 
         <TabsContent value="trending" className="mt-6">
           {renderProposals()}

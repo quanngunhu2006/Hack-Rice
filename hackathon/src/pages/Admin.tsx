@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/lib/supabase";
-import { moderateProposal, moderateReport } from "@/lib/api";
+// Removed unused API imports
 import {
   CheckCircle,
   XCircle,
@@ -26,7 +27,7 @@ import {
   Calendar,
   User,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ModerationAction {
   id: string;
@@ -36,6 +37,7 @@ interface ModerationAction {
 }
 
 export default function Admin() {
+  const queryClient = useQueryClient();
   const [, setSelectedItem] = useState<any>(null);
   const [moderationAction, setModerationAction] =
     useState<ModerationAction | null>(null);
@@ -294,22 +296,58 @@ export default function Admin() {
     </Card>
   );
 
+  // Animated bubble for top tabs
+  const [tab, setTab] = useState<'proposals' | 'reports'>('proposals')
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [bubble, setBubble] = useState<{ x: number; width: number; height: number }>({ x: 0, width: 0, height: 0 })
+  const indexForTab = (value: string) => ['proposals', 'reports'].indexOf(value)
+  const measure = () => {
+    const list = listRef.current
+    if (!list) return
+    const idx = indexForTab(tab)
+    const el = triggerRefs.current[idx]
+    if (!el) return
+    const listRect = list.getBoundingClientRect()
+    const rect = el.getBoundingClientRect()
+    const styles = window.getComputedStyle(list)
+    const paddingLeft = parseFloat(styles.paddingLeft || '0')
+    setBubble({ x: rect.left - listRect.left - paddingLeft, width: rect.width, height: rect.height })
+  }
+  useLayoutEffect(() => {
+    measure()
+    const onResize = () => measure()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  useEffect(() => { measure() }, [tab])
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
       <div>
-        <h1 className="text-3xl font-bold">Moderation Dashboard</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <AlertTriangle className="h-7 w-7 text-primary" />
+          Moderation Dashboard
+        </h1>
         <p className="text-muted-foreground">
           Review and moderate pending proposals and reports
         </p>
       </div>
 
-      <Tabs defaultValue="proposals" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="proposals" className="flex items-center gap-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'proposals' | 'reports')} className="space-y-6">
+        <TabsList ref={listRef} className="relative">
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute left-1 top-1 rounded-md bg-background shadow-sm"
+            animate={{ x: bubble.x, width: bubble.width, height: bubble.height }}
+            transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.95 }}
+            style={{ willChange: 'transform,width,height' }}
+          />
+          <TabsTrigger value="proposals" className="relative z-10 flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none" ref={(el) => { triggerRefs.current[0] = el }}>
             <FileText className="h-4 w-4" />
             Pending Proposals ({pendingProposals?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
+          <TabsTrigger value="reports" className="relative z-10 flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none" ref={(el) => { triggerRefs.current[1] = el }}>
             <MapPin className="h-4 w-4" />
             Pending Reports ({pendingReports?.length || 0})
           </TabsTrigger>

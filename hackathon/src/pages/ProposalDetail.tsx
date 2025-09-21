@@ -57,7 +57,7 @@ export default function ProposalDetail() {
   if (error || !proposal) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild>
+        <Button variant="secondary" className="shadow-xs hover:shadow-sm border border-border/80 text-foreground/90" asChild>
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Explore
@@ -116,7 +116,7 @@ export default function ProposalDetail() {
   return (
     <div className="space-y-6">
       {/* Navigation */}
-      <Button variant="ghost" asChild>
+      <Button variant="secondary" className="shadow-xs hover:shadow-sm border border-border/80 text-foreground/90" asChild>
         <Link to="/">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Explore
@@ -205,6 +205,8 @@ export default function ProposalDetail() {
             <CardContent>
               <VoteSection
                 proposalId={proposal.id}
+                upvotes={proposal.upvotes}
+                downvotes={proposal.downvotes}
                 onUnverifiedClick={handleUpvoteClick}
                 proposalTitle={proposal.title}
               />

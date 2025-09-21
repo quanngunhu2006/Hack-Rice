@@ -142,8 +142,8 @@ export default function InterestFormPopup({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border shadow-lg">
-        <DialogHeader className="text-center pb-6">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card/98 border shadow-lg">
+        <DialogHeader className="text-center pb-6 sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
           <div className="flex flex-col items-center gap-4">
             <div className="p-3 bg-green-500 rounded-full shadow-sm">
               <Target className="h-6 w-6 text-white" />
@@ -163,7 +163,7 @@ export default function InterestFormPopup({
 
         <div className="space-y-6">
           {/* Community Interest Card */}
-          <Card className="border-green-200 bg-green-50 shadow-sm">
+          <Card className="border-green-200 bg-green-50/90 backdrop-blur-sm shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500 rounded-full shadow-sm">
@@ -196,7 +196,7 @@ export default function InterestFormPopup({
                 forward.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 bg-card">
+            <CardContent className="space-y-6 bg-card/95">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">What is your name? *</Label>
@@ -269,7 +269,7 @@ export default function InterestFormPopup({
           </Card>
         </div>
 
-        <DialogFooter className="gap-3 pt-6 bg-card">
+        <DialogFooter className="gap-3 pt-6 sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
           <Button
             variant="outline"
             onClick={handleClose}

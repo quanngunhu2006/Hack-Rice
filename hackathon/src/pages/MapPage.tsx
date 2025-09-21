@@ -636,7 +636,7 @@ export default function MapPage() {
   }, [])
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col fade-in">
       {/* Header */}
       <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between">
@@ -649,8 +649,9 @@ export default function MapPage() {
             {/* Toggle buttons */}
             <Button
               variant={showReports ? "default" : "outline"}
-              size="sm"
+              size="lg"
               onClick={() => setShowReports(!showReports)}
+              className="button-shine transition-[transform,box-shadow,background-color] duration-150 hover:shadow-md hover:translate-y-0"
             >
               <MapPin className="mr-2 h-4 w-4" />
               Reports
@@ -658,8 +659,9 @@ export default function MapPage() {
             
             <Button
               variant={showHeatmap ? "default" : "outline"}
-              size="sm"
+              size="lg"
               onClick={() => setShowHeatmap(!showHeatmap)}
+              className="button-shine transition-[transform,box-shadow,background-color] duration-150 hover:shadow-md hover:translate-y-0"
             >
               <Layers className="mr-2 h-4 w-4" />
               Heatmap
@@ -670,7 +672,7 @@ export default function MapPage() {
             {isAuthenticated && (
               <Dialog open={showAddReport} onOpenChange={setShowAddReport}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button size="lg" className="button-shine transition-[transform,box-shadow,background-color] duration-150 hover:shadow-md hover:translate-y-0">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Report
                   </Button>
