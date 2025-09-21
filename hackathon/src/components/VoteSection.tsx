@@ -1,21 +1,12 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  useUpvote,
-  useDownvote,
-  useUserVotes,
-  useProposal,
-} from "@/hooks/useProposals";
-import { useToast } from "@/hooks/useToast";
-import { ArrowUp, ArrowDown } from "lucide-react";
-import InterestFormPopup from "./InterestFormPopup";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAuth } from '@/contexts/AuthContext'
+import { useUpvote, useDownvote, useUserVotes, useProposal } from '@/hooks/useProposals'
+import { useToast } from '@/hooks/useToast'
+import { ArrowUp, ArrowDown } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import InterestFormPopup from './InterestFormPopup'
 
 interface VoteSectionProps {
   proposalId: string;
@@ -32,12 +23,12 @@ export default function VoteSection({
   onUnverifiedClick,
   proposalTitle = "Proposal",
 }: VoteSectionProps) {
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
-  const [flashColor, setFlashColor] = useState<string>("");
-  const [optimisticVote, setOptimisticVote] = useState<"up" | "down" | null>(
-    null
-  );
+  const { user, profile } = useAuth()
+  const { toast } = useToast()
+  const [flashColor, setFlashColor] = useState<string>('')
+  const [optimisticVote, setOptimisticVote] = useState<'up' | 'down' | null>(null)
+  const [showInterestForm, setShowInterestForm] = useState(false)
+  const [popupUpvoteCount, setPopupUpvoteCount] = useState<number>(0)
 
   const upvoteMutation = useUpvote();
   const downvoteMutation = useDownvote();
@@ -99,37 +90,24 @@ export default function VoteSection({
     setFlashColor("green");
 
     // Optimistic toggle: compute next state based on current
-    const previous = currentVoteType;
-    const next: "up" | "down" | null = previous === "up" ? null : "up";
-    setOptimisticVote(next);
+    const previous = currentVoteType
+    const next: 'up' | 'down' | null = previous === 'up' ? null : 'up'
 
-    // Check if upvotes reach 10
-    console.log(
-      "Debug - Original upvotes:",
-      upvotes,
-      "Optimistic upvotes:",
-      optimisticUpvotes,
-      "New upvote count:",
-      newUpvoteCount,
-      "Is currently upvoted:",
-      isCurrentlyUpvoted
-    );
+    // Compute new upvote count for threshold logic
+    const INTEREST_THRESHOLD = 2 // testing threshold
+    const previousUpvotes = upvotes || 0
+    const newUpvoteCount = previous === 'up' ? previousUpvotes - 1 : previousUpvotes + 1
 
-    if (newUpvoteCount >= 10) {
-      console.log("🎉 GOAL REACHED! Opening popup...");
-      // Open the interest form popup
-      setShowInterestForm(true);
-      console.log("✅ Popup state set to true");
-    } else {
-      console.log(
-        "❌ Goal not reached yet. Need",
-        10 - newUpvoteCount,
-        "more upvotes"
-      );
+    // Trigger interest form when adding an upvote results in >= threshold
+    if (previous !== 'up' && newUpvoteCount >= INTEREST_THRESHOLD) {
+      setPopupUpvoteCount(newUpvoteCount)
+      setShowInterestForm(true)
     }
 
+    setOptimisticVote(next)
+
     try {
-      await upvoteMutation.mutateAsync(proposalId);
+      await upvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
       setFlashColor(""); // Clear flash on error
       // Revert optimistic state on error
@@ -307,28 +285,42 @@ export default function VoteSection({
   // Authentication temporarily disabled for demo
   // if (!user || !isVerified) {
   // if (!user) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div>{renderVoteDisplay()}</div>
-      </TooltipTrigger>
-      <TooltipContent>"Click to vote"</TooltipContent>
-    </Tooltip>
-  );
+    return (
+      <>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              {renderVoteDisplay()}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            "Click to vote"
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Interest Form Popup */}
+        <InterestFormPopup
+          isOpen={showInterestForm}
+          onClose={() => setShowInterestForm(false)}
+          proposalId={proposalId}
+          upvoteCount={popupUpvoteCount || upvotes}
+        />
+      </>
+    )
   // }
 
   return (
     <>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div>{renderVoteDisplay()}</div>
+          <div>
+            {renderVoteDisplay()}
+          </div>
         </TooltipTrigger>
         <TooltipContent>
-          {userVote && userVote.vote_type === "up"
-            ? "You've upvoted this proposal"
-            : userVote && userVote.vote_type === "down"
-            ? "You've downvoted this proposal"
-            : "Click to vote"}
+          {userVote && userVote.vote_type === 'up' ? "You've upvoted this proposal" :
+           userVote && userVote.vote_type === 'down' ? "You've downvoted this proposal" :
+           "Click to vote"}
         </TooltipContent>
       </Tooltip>
 
@@ -337,8 +329,8 @@ export default function VoteSection({
         isOpen={showInterestForm}
         onClose={() => setShowInterestForm(false)}
         proposalId={proposalId}
-        upvoteCount={optimisticUpvotes}
+        upvoteCount={popupUpvoteCount || upvotes}
       />
     </>
-  );
+  )
 }

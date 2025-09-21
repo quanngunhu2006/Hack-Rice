@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -23,7 +23,6 @@ export default function UpvoteButton({
   upvotes,
   downvotes = 0,
   compact = false,
-  onUnverifiedClick,
 }: UpvoteButtonProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -88,29 +87,10 @@ export default function UpvoteButton({
       }
     }
 
-    // Check if upvotes reach 10
-    console.log(
-      "Debug - Original upvotes:",
-      upvotes,
-      "Optimistic upvotes:",
-      optimisticUpvotes,
-      "New upvote count:",
-      newUpvoteCount,
-      "Is currently upvoted:",
-      isCurrentlyUpvoted
-    );
-
-    if (newUpvoteCount >= 1) {
-      console.log("🎉 GOAL REACHED! Opening popup...");
-      // Open the interest form popup
+    // Trigger interest form when the user adds an upvote that crosses the threshold
+    const INTEREST_THRESHOLD = 2; // testing threshold
+    if (!isCurrentlyUpvoted && newUpvoteCount >= INTEREST_THRESHOLD) {
       setShowInterestForm(true);
-      console.log("✅ Popup state set to true");
-    } else {
-      console.log(
-        "❌ Goal not reached yet. Need",
-        1 - newUpvoteCount,
-        "more upvotes"
-      );
     }
 
     try {
@@ -184,26 +164,25 @@ export default function UpvoteButton({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={
-              userVote && userVote.vote_type === "up" ? "default" : "outline"
-            }
+            variant="outline"
             size={compact ? "sm" : "default"}
             onClick={handleUpvote}
             disabled={upvoteMutation.isPending}
-            className="flex items-center gap-2">
+            className={`flex items-center gap-2 ${
+              isUserVoteUp
+                ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+                : ''
+            }`}
+          >
             {buttonContent}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {userVote && userVote.vote_type === "up"
-            ? "You've upvoted this proposal"
-            : "Upvote this proposal"}
+          {isUserVoteUp ? "You've upvoted this proposal" : "Upvote this proposal"}
         </TooltipContent>
       </Tooltip>
 
       {/* Interest Form Popup */}
-      {console.log("Rendering popup with isOpen:", showInterestForm)}
-
       <InterestFormPopup
         isOpen={showInterestForm}
         onClose={() => setShowInterestForm(false)}
@@ -211,5 +190,5 @@ export default function UpvoteButton({
         upvoteCount={optimisticUpvotes}
       />
     </>
-  );
+  )
 }
