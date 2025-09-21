@@ -188,6 +188,32 @@ export type Database = {
           }
         ]
       }
+      Interest: {
+        Row: {
+          Name: string
+          email: string
+          Digital_Sig: string
+        }
+        Insert: {
+          Name: string
+          email: string
+          Digital_Sig: string
+        }
+        Update: {
+          Name?: string
+          email?: string
+          Digital_Sig?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interest_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -238,10 +264,12 @@ export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Proposal = Database['public']['Tables']['proposals']['Row']
 export type Vote = Database['public']['Tables']['votes']['Row']
 export type RoadReport = Database['public']['Tables']['road_reports']['Row']
+export type Interest = Database['public']['Tables']['Interest']['Row']
 
 export type ProposalInsert = Database['public']['Tables']['proposals']['Insert']
 export type VoteInsert = Database['public']['Tables']['votes']['Insert']
 export type RoadReportInsert = Database['public']['Tables']['road_reports']['Insert']
+export type InterestInsert = Database['public']['Tables']['Interest']['Insert']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
 export type ProposalCategory = Database['public']['Enums']['proposal_category']

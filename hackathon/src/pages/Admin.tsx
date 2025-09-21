@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
+import { supabase } from "@/lib/supabase";
 import {
   CheckCircle,
   XCircle,
@@ -56,7 +58,6 @@ export default function Admin() {
 
   // For now we don't have moderation for reports wired up
   const pendingReports: any[] = [];
-  const proposalsLoading = false;
   const reportsLoading = false;
 
   const approveMutation = useMutation({
