@@ -169,12 +169,12 @@ html, body {
   .border-animate {
     position: relative;
     outline: 0 solid transparent;
-    outline-offset: 5px; /* keep halo 5px away from edge */
-    transition: outline-color .2s ease, outline-width .2s ease, outline-offset .2s ease;
+    outline-offset: 2px; /* 2px away from edge */
+    transition: outline-color .14s cubic-bezier(.2,.8,.2,1), outline-width .14s cubic-bezier(.2,.8,.2,1), outline-offset .14s cubic-bezier(.2,.8,.2,1);
   }
   .border-animate:hover,
   .border-animate:focus-visible {
-    outline-color: color-mix(in oklch, var(--ring) 55%, transparent);
+    outline-color: color-mix(in oklch, var(--ring) 60%, transparent);
     outline-width: 2px;
   }
 
