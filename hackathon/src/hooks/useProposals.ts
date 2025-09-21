@@ -2,11 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Proposal, ProposalInsert } from '@/types/database'
+import { getAnonymousUserId } from '@/lib/utils'
 
 interface UseProposalsOptions {
   q?: string
   category?: string | null
-  sort?: 'upvotes' | 'created_at'
+  sort?: 'upvotes' | 'created_at' | 'location_hint'
 }
 
 export function useProposals(options: UseProposalsOptions = {}) {
@@ -33,6 +34,8 @@ export function useProposals(options: UseProposalsOptions = {}) {
       // Sorting
       if (sort === 'upvotes') {
         query = query.order('upvotes', { ascending: false })
+      } else if (sort === 'location_hint') {
+        query = query.order('location_hint', { ascending: true })
       } else {
         query = query.order('created_at', { ascending: false })
       }
@@ -41,7 +44,9 @@ export function useProposals(options: UseProposalsOptions = {}) {
 
       if (error) throw error
       return data || []
-    }
+    },
+    staleTime: 0, // Always refetch fresh data
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
   })
 }
 
@@ -59,10 +64,12 @@ export function useProposal(id: string) {
         if (error.code === 'PGRST116') return null // Not found
         throw error
       }
-      
+
       return data
     },
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 0, // Always refetch fresh data
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
   })
 }
 
@@ -102,11 +109,12 @@ export function useUpvote() {
   return useMutation({
     mutationFn: async (proposalId: string) => {
       // Call with exact parameter names matching function signature
-      const { data, error } = await supabase.rpc('cast_vote', {
+      const userId = user?.sub || getAnonymousUserId()
+      const { data, error } = await supabase.rpc('cast_vote', ({
         proposal_id: proposalId,
         vote_direction: 'up',
-        user_id: user?.sub  // Pass the Auth0 user ID
-      })
+        user_id: userId
+      } as any))
 
       if (error) throw error
       if (!data.success) throw new Error(data.message)
@@ -129,11 +137,12 @@ export function useDownvote() {
   return useMutation({
     mutationFn: async (proposalId: string) => {
       // Call with exact parameter names matching function signature
-      const { data, error } = await supabase.rpc('cast_vote', {
+      const userId = user?.sub || getAnonymousUserId()
+      const { data, error } = await supabase.rpc('cast_vote', ({
         proposal_id: proposalId,
         vote_direction: 'down',
-        user_id: user?.sub  // Pass the Auth0 user ID
-      })
+        user_id: userId
+      } as any))
 
       if (error) throw error
       if (!data.success) throw new Error(data.message)
@@ -141,10 +150,8 @@ export function useDownvote() {
       return data
     },
     onSuccess: (_, proposalId) => {
-      // Invalidate proposals, specific proposal, and user votes
-      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      // Invalidate specific queries - proposals and user-votes are handled by upvote
       queryClient.invalidateQueries({ queryKey: ['proposal', proposalId] })
-      queryClient.invalidateQueries({ queryKey: ['user-votes'] })
     }
   })
 }
@@ -153,22 +160,29 @@ export function useUserVotes() {
   const { user } = useAuth()
 
   return useQuery({
-    queryKey: ['user-votes', user?.sub],
+    queryKey: ['user-votes', user?.sub || getAnonymousUserId()],
     queryFn: async () => {
-      if (!user) return []
+      const userId = user?.sub || getAnonymousUserId()
+      if (!userId) return []
 
       const { data, error } = await supabase
         .from('votes')
         .select('proposal_id, vote_type')
-        .eq('author_id', user.sub)
+        .eq('author_id', userId)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching user votes:', error)
+        throw error
+      }
+
       return data.map(vote => ({
         proposal_id: vote.proposal_id,
         vote_type: vote.vote_type
       }))
     },
-    enabled: !!user
+    enabled: true,
+    staleTime: 0, // Always refetch when component mounts
+    gcTime: 0, // Don't cache the data
   })
 }
 
