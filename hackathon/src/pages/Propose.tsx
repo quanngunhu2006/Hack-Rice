@@ -154,9 +154,12 @@ export default function Propose() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 fade-in">
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">Create a Proposal</h1>
+        <h1 className="text-3xl font-bold mb-2 flex items-center justify-center gap-2">
+          <FileText className="h-7 w-7 text-primary" />
+          Create a Proposal
+        </h1>
         <p className="text-muted-foreground">
           Propose improvements to your city that fall within local jurisdiction
         </p>
@@ -287,7 +290,7 @@ export default function Propose() {
 
                   <Button 
                     type="submit" 
-                    className="w-full"
+                    className="w-full button-shine border-animate transition-[transform,box-shadow,background-color] duration-150"
                     disabled={createProposal.isPending}
                   >
                     {createProposal.isPending ? "Creating..." : "Create Proposal"}

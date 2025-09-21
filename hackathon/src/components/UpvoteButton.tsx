@@ -34,10 +34,10 @@ export default function UpvoteButton({
   const upvoteMutation = useUpvote();
   const { data: userVotes } = useUserVotes();
 
-  const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
-  const isUserVoteUp = userVote && userVote.vote_type === 'up'
-  const isVerified = profile?.verified_resident
-  const netScore = optimisticUpvotes - optimisticDownvotes
+  const userVote = userVotes?.find((vote) => vote.proposal_id === proposalId);
+  const isUserVoteUp = userVote && userVote.vote_type === "up";
+  const isVerified = profile?.verified_resident;
+  const netScore = optimisticUpvotes - optimisticDownvotes;
 
   const handleUpvote = async () => {
     // Authentication temporarily disabled for demo - backend handles demo users

@@ -36,6 +36,7 @@
     "leaflet": "^1.9.4",
     "lodash": "^4.17.21",
     "lucide-react": "^0.544.0",
+    "framer-motion": "^11.3.22",
     "mapbox-gl": "^3.15.0",
     "next": "^15.5.3",
     "react": "^19.1.1",
