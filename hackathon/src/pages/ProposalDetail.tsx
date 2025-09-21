@@ -195,8 +195,6 @@ export default function ProposalDetail() {
             <CardContent>
               <VoteSection
                 proposalId={proposal.id}
-                upvotes={proposal.upvotes}
-                downvotes={proposal.downvotes}
                 onUnverifiedClick={handleUpvoteClick}
               />
             </CardContent>

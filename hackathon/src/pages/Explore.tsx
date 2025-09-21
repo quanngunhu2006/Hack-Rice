@@ -19,10 +19,25 @@ export default function Explore() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const { isAuthenticated } = useAuth0()
 
+  const getSortField = () => {
+    switch (activeTab) {
+      case 'trending':
+        return 'upvotes'
+      case 'newest':
+        return 'created_at'
+      case 'nearby':
+        // For now, sort by location_hint alphabetically
+        // In a real implementation, you'd sort by geographical distance
+        return 'location_hint'
+      default:
+        return 'created_at'
+    }
+  }
+
   const { data: proposals, isLoading, error } = useProposals({
     q: searchQuery,
     category: selectedCategory,
-    sort: activeTab === 'trending' ? 'upvotes' : 'created_at'
+    sort: getSortField()
   })
 
   const handleCategoryClick = (category: string) => {

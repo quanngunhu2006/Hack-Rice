@@ -2,38 +2,42 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/AuthContext'
-import { useUpvote, useDownvote, useUserVotes } from '@/hooks/useProposals'
+import { useUpvote, useDownvote, useUserVotes, useProposal } from '@/hooks/useProposals'
 import { useToast } from '@/hooks/useToast'
 import { ArrowUp, ArrowDown } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface VoteSectionProps {
   proposalId: string
-  upvotes: number
-  downvotes: number
   compact?: boolean
   onUnverifiedClick?: () => void
 }
 
 export default function VoteSection({
   proposalId,
-  upvotes,
-  downvotes,
   compact = false,
   onUnverifiedClick
 }: VoteSectionProps) {
   const { user, profile } = useAuth()
   const { toast } = useToast()
-  const [optimisticUpvotes, setOptimisticUpvotes] = useState(upvotes)
-  const [optimisticDownvotes, setOptimisticDownvotes] = useState(downvotes)
   const [flashColor, setFlashColor] = useState<string>('')
+  const [optimisticVote, setOptimisticVote] = useState<'up' | 'down' | null>(null)
 
   const upvoteMutation = useUpvote()
   const downvoteMutation = useDownvote()
   const { data: userVotes } = useUserVotes()
+  const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId)
 
   const userVote = userVotes?.find(vote => vote.proposal_id === proposalId)
   const isVerified = profile?.verified_resident
-  const netScore = optimisticUpvotes - optimisticDownvotes
+
+  // Extract proposal data
+  const { upvotes, downvotes } = proposal || { upvotes: 0, downvotes: 0 }
+
+  // Determine current active vote type (optimistic first, then server state)
+  const currentVoteType: 'up' | 'down' | null = optimisticVote ?? (userVote ? userVote.vote_type as 'up' | 'down' : null)
+  const isUpActive = currentVoteType === 'up'
+  const isDownActive = currentVoteType === 'down'
 
   // Flash animation effect
   useEffect(() => {
@@ -43,55 +47,50 @@ export default function VoteSection({
     }
   }, [flashColor])
 
-  const handleUpvote = async () => {
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to vote on proposals",
-        variant: "destructive"
-      })
-      return
-    }
+  // Sync optimistic state with server state when it changes
+  useEffect(() => {
+    setOptimisticVote(userVote ? (userVote.vote_type as 'up' | 'down') : null)
+  }, [userVote?.vote_type])
 
-    if (!isVerified) {
-      if (onUnverifiedClick) {
-        onUnverifiedClick()
-      } else {
-        toast({
-          title: "Verification required",
-          description: "Please verify your residency to vote on proposals",
-          variant: "destructive"
-        })
-      }
-      return
-    }
+  const handleUpvote = async () => {
+    // Authentication temporarily disabled for demo - backend handles demo users
+    // if (!user) {
+    //   toast({
+    //     title: "Sign in required",
+    //     description: "Please sign in to vote on proposals",
+    //     variant: "destructive"
+    //   })
+    //   return
+    // }
+
+    // Verification temporarily disabled - users can vote without verification
+    // if (!isVerified) {
+    //   if (onUnverifiedClick) {
+    //     onUnverifiedClick()
+    //   } else {
+    //     toast({
+    //       title: "Verification required",
+    //       description: "Please verify your residency to vote on proposals",
+    //       variant: "destructive"
+    //     })
+    //   }
+    //   return
+    // }
 
     // Flash animation
     setFlashColor('green')
 
-    // Optimistic update
-    const isCurrentlyUpvoted = userVote?.vote_type === 'up'
-    const isCurrentlyDownvoted = userVote?.vote_type === 'down'
-
-    if (isCurrentlyUpvoted) {
-      // Remove upvote
-      setOptimisticUpvotes(prev => prev - 1)
-    } else {
-      // Add upvote
-      setOptimisticUpvotes(prev => prev + 1)
-      // Remove downvote if it exists
-      if (isCurrentlyDownvoted) {
-        setOptimisticDownvotes(prev => prev - 1)
-      }
-    }
+    // Optimistic toggle: compute next state based on current
+    const previous = currentVoteType
+    const next: 'up' | 'down' | null = previous === 'up' ? null : 'up'
+    setOptimisticVote(next)
 
     try {
       await upvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
-      // Rollback optimistic update on error
-      setOptimisticUpvotes(upvotes)
-      setOptimisticDownvotes(downvotes)
       setFlashColor('') // Clear flash on error
+      // Revert optimistic state on error
+      setOptimisticVote(previous)
 
       toast({
         title: "Vote failed",
@@ -102,54 +101,44 @@ export default function VoteSection({
   }
 
   const handleDownvote = async () => {
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to vote on proposals",
-        variant: "destructive"
-      })
-      return
-    }
+    // Authentication temporarily disabled for demo - backend handles demo users
+    // if (!user) {
+    //   toast({
+    //     title: "Sign in required",
+    //     description: "Please sign in to vote on proposals",
+    //     variant: "destructive"
+    //   })
+    //   return
+    // }
 
-    if (!isVerified) {
-      if (onUnverifiedClick) {
-        onUnverifiedClick()
-      } else {
-        toast({
-          title: "Verification required",
-          description: "Please verify your residency to vote on proposals",
-          variant: "destructive"
-        })
-      }
-      return
-    }
+    // Verification temporarily disabled - users can vote without verification
+    // if (!isVerified) {
+    //   if (onUnverifiedClick) {
+    //     onUnverifiedClick()
+    //   } else {
+    //     toast({
+    //       title: "Verification required",
+    //       description: "Please verify your residency to vote on proposals",
+    //       variant: "destructive"
+    //     })
+    //   }
+    //   return
+    // }
 
     // Flash animation
     setFlashColor('red')
 
-    // Optimistic update
-    const isCurrentlyDownvoted = userVote?.vote_type === 'down'
-    const isCurrentlyUpvoted = userVote?.vote_type === 'up'
-
-    if (isCurrentlyDownvoted) {
-      // Remove downvote
-      setOptimisticDownvotes(prev => prev - 1)
-    } else {
-      // Add downvote
-      setOptimisticDownvotes(prev => prev + 1)
-      // Remove upvote if it exists
-      if (isCurrentlyUpvoted) {
-        setOptimisticUpvotes(prev => prev - 1)
-      }
-    }
+    // Optimistic toggle: compute next state based on current
+    const previous = currentVoteType
+    const next: 'up' | 'down' | null = previous === 'down' ? null : 'down'
+    setOptimisticVote(next)
 
     try {
       await downvoteMutation.mutateAsync(proposalId)
     } catch (error: any) {
-      // Rollback optimistic update on error
-      setOptimisticUpvotes(upvotes)
-      setOptimisticDownvotes(downvotes)
       setFlashColor('') // Clear flash on error
+      // Revert optimistic state on error
+      setOptimisticVote(previous)
 
       toast({
         title: "Vote failed",
@@ -164,13 +153,13 @@ export default function VoteSection({
       return (
         <div className="flex flex-col items-center gap-2">
           <div className={`text-sm font-medium ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
-            {netScore}
+            {upvotes - downvotes}
           </div>
           <div className="flex items-center gap-2">
-            <ArrowUp className={`h-4 w-4 ${userVote && userVote.vote_type === 'up' ? 'text-green-500' : 'text-gray-400'}`} />
-            <span className="text-xs text-muted-foreground">{optimisticUpvotes}</span>
-            <ArrowDown className={`h-4 w-4 ${userVote && userVote.vote_type === 'down' ? 'text-red-500' : 'text-gray-400'}`} />
-            <span className="text-xs text-muted-foreground">{optimisticDownvotes}</span>
+            <ArrowUp className={`h-4 w-4 ${isUpActive ? 'text-green-500' : 'text-gray-400'}`} />
+            <span className="text-xs text-muted-foreground">{upvotes}</span>
+            <ArrowDown className={`h-4 w-4 ${isDownActive ? 'text-red-500' : 'text-gray-400'}`} />
+            <span className="text-xs text-muted-foreground">{downvotes}</span>
           </div>
         </div>
       )
@@ -181,31 +170,41 @@ export default function VoteSection({
         {/* Vote count in the middle */}
         <div className="text-center">
           <div className={`text-3xl font-bold ${flashColor === 'green' ? 'animate-pulse text-green-500' : flashColor === 'red' ? 'animate-pulse text-red-500' : ''}`}>
-            {netScore}
+            {upvotes - downvotes}
           </div>
           <div className="text-sm text-muted-foreground">
-            {optimisticUpvotes} positive • {optimisticDownvotes} negative
+            {upvotes} positive • {downvotes} negative
           </div>
         </div>
 
         {/* Vote buttons */}
         <div className="flex gap-2 justify-center">
           <Button
-            variant={userVote && userVote.vote_type === 'up' ? "default" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={handleUpvote}
-            disabled={(!user || !isVerified) || upvoteMutation.isPending || downvoteMutation.isPending}
-            className="flex items-center gap-1"
+            onClick={(e) => { e.stopPropagation(); handleUpvote(); }}
+            disabled={upvoteMutation.isPending || downvoteMutation.isPending}
+            className={`flex items-center gap-1 ${
+              isUpActive
+                ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+                : ''
+            }`}
+            title="Upvote this proposal"
           >
             <ArrowUp className="h-4 w-4" />
             Upvote
           </Button>
           <Button
-            variant={userVote && userVote.vote_type === 'down' ? "destructive" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={handleDownvote}
-            disabled={(!user || !isVerified) || upvoteMutation.isPending || downvoteMutation.isPending}
-            className="flex items-center gap-1"
+            onClick={(e) => { e.stopPropagation(); handleDownvote(); }}
+            disabled={upvoteMutation.isPending || downvoteMutation.isPending}
+            className={`flex items-center gap-1 ${
+              isDownActive
+                ? 'bg-red-600 text-white hover:bg-red-700 border-red-600'
+                : ''
+            }`}
+            title="Downvote this proposal"
           >
             <ArrowDown className="h-4 w-4" />
             Downvote
@@ -215,20 +214,43 @@ export default function VoteSection({
     )
   }
 
-  if (!user || !isVerified) {
+  // Handle loading state
+  if (proposalLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <Skeleton className="h-8 w-16 mx-auto" />
+          <Skeleton className="h-4 w-32 mx-auto mt-2" />
+        </div>
+        <div className="flex gap-2 justify-center">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+      </div>
+    )
+  }
+
+  // Handle error state
+  if (!proposal) {
+    return <div>Proposal not found</div>
+  }
+
+  // Authentication temporarily disabled for demo
+  // if (!user || !isVerified) {
+  // if (!user) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-pointer" onClick={handleUpvote}>
+          <div>
             {renderVoteDisplay()}
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          {!user ? "Sign in to vote" : "Verify residency to vote"}
+          "Click to vote"
         </TooltipContent>
       </Tooltip>
     )
-  }
+  // }
 
   return (
     <Tooltip>
