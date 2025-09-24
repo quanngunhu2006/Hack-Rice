@@ -70,11 +70,11 @@ export default function Navigation() {
     if (location.pathname.startsWith('/proposals/')) return 'Proposal'
     if (location.pathname.startsWith('/login')) return 'Login'
     const match = navItems.find((it) => isActivePath(it.path))
-    return match?.label ?? 'CitizenVoice'
+    return match?.label ?? 'CityVoice'
   }, [location.pathname, navItems])
 
   useEffect(() => {
-    document.title = `${currentTitle} • CitizenVoice`
+    document.title = `${currentTitle} • CityVoice`
   }, [currentTitle])
 
   // Measure item positions for desktop bubble animation
@@ -257,7 +257,7 @@ export default function Navigation() {
 
             {/* User section */}
             <div className="mt-auto">
-              <div className="bg-card/95 border border-foreground/30 rounded-lg p-4 space-y-3 shadow-sm mx-[-14px] px-[10px]">
+            <div className="bg-card/95 border border-foreground/30 rounded-lg p-4 pb-[14px] space-y-3 shadow-sm mx-[-14px] px-[10px]">
               {isAuthenticated ? (
                 <>
                   <div className="px-3 py-2 text-sm rounded-md bg-muted/80 border border-foreground/30 text-muted-foreground cursor-default select-text">
@@ -265,7 +265,7 @@ export default function Navigation() {
                   </div>
                   <Button
                     variant="destructive"
-                    className="w-full justify-center gap-3 button-shine border border-animate"
+                    className="w-full justify-center gap-3 button-shine border"
                     onClick={handleSignOut}
                   >
                     <LogOut className="h-4 w-4" />
