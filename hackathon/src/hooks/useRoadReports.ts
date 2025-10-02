@@ -38,10 +38,17 @@ export function useRoadReports(options: UseRoadReportsOptions = {}) {
         if (error) throw error
         
         // Transform PostGIS points to lat/lng
-        return (data || []).map(report => ({
-          ...report,
-          lng: 0, // TODO: Extract from PostGIS point
-          lat: 0   // TODO: Extract from PostGIS point
+        // Map DB shape to RoadReportWithCoords type
+        return (data || []).map((report) => ({
+          id: report.id as unknown as number,
+          author_id: (report as any).author_id ?? (report as any).user_id,
+          street_name: report.street_name ?? null,
+          description: report.description,
+          media_urls: report.media_urls ?? null,
+          created_at: report.created_at,
+          // Without PostGIS parsing on the client, default to 0s to satisfy type
+          lng: 0,
+          lat: 0,
         }))
       }
     }
@@ -90,7 +97,7 @@ export function useCreateRoadReport() {
       const { data, error } = await supabase
         .from('road_reports')
         .insert([{
-          user_id: user.sub,
+          author_id: user.sub,
           geom: geom as any, // PostGIS point
           street_name,
           description,

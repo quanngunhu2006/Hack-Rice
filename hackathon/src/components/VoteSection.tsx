@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useAuth } from '@/contexts/AuthContext'
 import { useUpvote, useDownvote, useUserVotes, useProposal } from '@/hooks/useProposals'
 import { useToast } from '@/hooks/useToast'
 import { ArrowUp, ArrowDown } from 'lucide-react'
@@ -20,10 +19,9 @@ interface VoteSectionProps {
 export default function VoteSection({
   proposalId,
   compact = false,
-  onUnverifiedClick,
-  proposalTitle = "Proposal",
+  onUnverifiedClick: _onUnverifiedClick,
+  proposalTitle: _proposalTitle = "Proposal",
 }: VoteSectionProps) {
-  const { user, profile } = useAuth()
   const { toast } = useToast()
   const [flashColor, setFlashColor] = useState<string>('')
   const [optimisticVote, setOptimisticVote] = useState<'up' | 'down' | null>(null)
@@ -37,7 +35,6 @@ export default function VoteSection({
     useProposal(proposalId);
 
   const userVote = userVotes?.find((vote) => vote.proposal_id === proposalId);
-  const isVerified = profile?.verified_resident;
 
   // Extract proposal data
   const { upvotes, downvotes } = proposal || { upvotes: 0, downvotes: 0 };
@@ -318,8 +315,8 @@ export default function VoteSection({
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          {userVote && userVote.vote_type === 'up' ? "You've upvoted this proposal" :
-           userVote && userVote.vote_type === 'down' ? "You've downvoted this proposal" :
+          {userVote?.vote_type === 'up' ? "You've upvoted this proposal" :
+           userVote?.vote_type === 'down' ? "You've downvoted this proposal" :
            "Click to vote"}
         </TooltipContent>
       </Tooltip>

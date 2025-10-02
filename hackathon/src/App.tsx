@@ -1,6 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAuth0 } from '@auth0/auth0-react'
 import Navigation from '@/components/Navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Explore from '@/pages/Explore'
@@ -12,7 +11,6 @@ import Admin from '@/pages/Admin'
 import Login from '@/pages/Login'
 
 function App() {
-  const { isAuthenticated } = useAuth0()
   const location = useLocation()
   
   return (
