@@ -26,7 +26,17 @@ export function useRoadReports(options: UseRoadReportsOptions = {}) {
         })
 
         if (error) throw error
-        return data || []
+        // Map RPC return (id, user_id, ...) to RoadReportWithCoords
+        return (data || []).map((row: any) => ({
+          id: typeof row.id === 'number' ? row.id : Number(row.id),
+          author_id: row.user_id,
+          street_name: row.street_name ?? null,
+          description: row.description,
+          media_urls: row.media_urls ?? null,
+          created_at: row.created_at,
+          lng: row.lng,
+          lat: row.lat,
+        }))
       } else {
         // Get all reports (limit for performance)
         const { data, error } = await supabase
